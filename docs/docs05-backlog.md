@@ -302,9 +302,24 @@ Fix empty window bug and improve window behavior.
   - All tasks derived from project_structure.md
   - Status: All tasks set to "Todo"
 
+**TASK-017 | Save Configuration Button Bug Fix | Priority: P0 | Status: Done**
+
+Fix Save Configuration button not responding to clicks.
+
+**Acceptance Criteria:**
+- [x] Add missing `command=self._save_config` parameter to save button
+- [x] Button now saves API key, beep setting, and overlay setting to .env
+- [x] Success feedback ("✓ Saved!") displays correctly
+
+---
+
 - [2026-01-12] Phase 10 tasks added (Advanced Features)
   - TASK-013: Recording History - In-memory storage, batch transcription, UI at top
   - TASK-014: File Upload - External audio file transcription
   - TASK-015: Beep Bug Fix - os.environ update for immediate effect
   - TASK-016: UI Bug Fixes - Empty window, close behavior, hotkey display
   - All Phase 10 tasks: Status = Done
+
+- [2026-01-12] TASK-017: Save Configuration Button Bug Fix
+  - Fixed missing command parameter on save button
+  - Status = Done

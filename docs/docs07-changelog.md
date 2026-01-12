@@ -39,3 +39,11 @@ Pure refactors with no behavior change are NOT notable.
 **Summary:** Improved Turkish transcription accuracy by explicitly passing language parameter to Groq Whisper API.
 
 **Notes:** Turkish language code (`tr`) is now sent with each transcription request, improving accuracy for Turkish speech input. This change is backward-compatible and applies automatically to all transcriptions.
+
+---
+
+## [2026-01-12]
+
+**Summary:** Fixed Save Configuration button not responding to clicks in settings window.
+
+**Notes:** The Save Configuration button now correctly saves API key, beep sound setting, and overlay visibility setting to .env file. Previously the button was missing its command handler.

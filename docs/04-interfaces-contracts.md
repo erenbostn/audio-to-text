@@ -140,6 +140,53 @@ If a task requires changing any contract:
 
 ---
 
+### HIST-001: Recording History Interface
+**Purpose:** In-memory recording management and batch transcription
+
+**Contract:**
+- **Storage:** In-memory dictionary (id → Recording)
+- **Lifecycle:** Recordings persist during app session, cleared on shutdown
+- **Recording Object:**
+  - id: Timestamp-based unique identifier
+  - filepath: Path to temp .wav file
+  - created_at: Datetime of recording
+  - transcribed: Boolean flag
+  - transcript: Transcribed text (None if not transcribed)
+- **Methods:**
+  - add_recording(filepath): Returns recording ID
+  - get_recordings(): List of recordings (newest first)
+  - update_transcript(id, text): Updates transcription result
+  - delete_recording(id): Removes from history
+  - clear_all(): Clears all recordings
+
+**UI Requirements:**
+- History list at TOP of settings window
+- Checkbox per recording for selection
+- Shows: filename, timestamp, file size, status (Ready/Done)
+- Transcript preview below transcribed items (truncated)
+- "Transcribe Selected" button for batch transcription
+- "Delete Selected" button to remove items
+
+---
+
+### FILE-001: File Upload Interface
+**Purpose:** Transcribe external audio files not created by recorder
+
+**Contract:**
+- **File Dialog:** tkinter.filedialog.askopenfilename
+- **Supported Formats:** WAV, MP3, OGG, FLAC, All files
+- **UI Components:**
+  - File entry showing selected path
+  - Browse button to open file dialog
+  - Transcribe File button to process
+- **Behavior:**
+  - User selects file via dialog
+  - Path stored in `_selected_file` variable
+  - Transcribe button calls transcriber.transcribe(file_path)
+  - Result injected via TextInjector
+
+---
+
 - [2026-01-12] Initial interface contracts definition
   - Change type: New contracts
   - Previous behavior: Undefined
@@ -151,3 +198,21 @@ If a task requires changing any contract:
   - Previous behavior: Language not specified, default Whisper auto-detection
   - New behavior: Explicit `language="tr"` parameter passed to Groq API for improved Turkish transcription accuracy
   - Compatibility notes: Backward-compatible (parameter defaults to "tr")
+
+- [2026-01-12] HOT-001: Hotkey Combination Changed
+  - Change type: Configuration value
+  - Previous behavior: Ctrl+Alt+Space
+  - New behavior: Ctrl+Alt+K (user preference)
+  - Compatibility notes: Breaking change for users who memorized previous hotkey
+
+- [2026-01-12] HIST-001: Recording History Interface (NEW)
+  - Change type: New feature
+  - Previous behavior: No history, auto-transcription on recording stop
+  - New behavior: In-memory history, manual selection, batch transcription
+  - Compatibility notes: User-visible workflow change
+
+- [2026-01-12] FILE-001: File Upload Interface (NEW)
+  - Change type: New feature
+  - Previous behavior: Only record-through-microphone supported
+  - New behavior: External audio files can be transcribed via file dialog
+  - Compatibility notes: Backward-compatible (recording still works)

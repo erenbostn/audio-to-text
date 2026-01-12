@@ -69,6 +69,13 @@
     - Scrollable body: CTkScrollableFrame for content overflow
     - History UI at TOP (first thing user sees)
 
+- [2026-01-12] Save Configuration Button Bug Fix
+  - What changed: Fixed Save Configuration button not responding to clicks
+  - Affected area: src/ui/settings_window.py
+  - Notes:
+    - Added missing `command=self._save_config` parameter to save button
+    - Button now correctly saves API key, beep setting, and overlay setting to .env file
+
 ---
 
 ## KNOWN ISSUES / UNKNOWNS (AI-maintained)

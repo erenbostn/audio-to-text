@@ -1,5 +1,9 @@
 Prompt Templates (Non-Canonical)
 
+kendi promptum:
+@ai\ai.md examine carefully and we start task do nothing We will proceed according to the rules in this file.
+:::::::::::::::::::
+
 This file provides human-facing prompt templates only.
 All operational rules, authority, output format, and documentation update behavior
 are defined exclusively in .ai/AI.md.

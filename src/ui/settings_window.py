@@ -537,7 +537,8 @@ class SettingsWindow(ctk.CTk):
             fg_color=self.ACCENT_COLOR,
             hover_color=self.ACCENT_GLOW,
             text_color=self.TEXT_PRIMARY,
-            border_width=0
+            border_width=0,
+            command=self._save_config
         )
         self._save_button.pack(fill="x", pady=(8, 0))
 
