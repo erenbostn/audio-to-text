@@ -185,29 +185,68 @@ def test_transcriber():
     print("Groq Transcriber Test")
     print("=" * 40)
 
+    # Find .env file by going up from current script location
+    current_file = Path(__file__).resolve()
+    project_root = current_file.parent.parent.parent  # Go up 3 levels: src/core/transcriber.py -> src/core -> src -> project_root
+
+    env_file = project_root / ".env"
+
+    if not env_file.exists():
+        print(f"\n✗ Error: .env file not found!")
+        print(f"   Expected location: {env_file}")
+        print(f"\nPlease create .env file with your Groq API key:")
+        print(f"   GROQ_API_KEY=gsk_your_api_key_here")
+        print(f"\nYou can copy .env.example to .env:")
+        print(f"   cp .env.example .env")
+        print(f"   Then edit .env and add your API key.")
+        return
+
     # Check API key
     print("Checking API key...")
-    transcriber = GroqTranscriber()
+    try:
+        transcriber = GroqTranscriber()
+    except ValueError as e:
+        print(f"✗ {e}")
+        print("\nPlease add your Groq API key to .env file:")
+        print("1. Get your key from: https://console.groq.com/keys")
+        print("2. Add this line to .env:")
+        print("   GROQ_API_KEY=gsk_...")
+        return
 
     if transcriber.test_api_key():
         print("✓ API key is valid")
     else:
-        print("✗ API key is invalid")
+        print("✗ API key validation failed")
         return
 
-    # Check for test audio file
+    # Check for test audio file (use project_root from above)
     test_file = "test_audio.wav"
-    if not Path(test_file).exists():
-        print(f"\nNo test audio found at: {test_file}")
-        print("Place a .wav file there to test transcription.")
-        print(f"\nOr run: python src/core/recorder.py")
-        return
+    test_file_path = project_root / test_file
+
+    if not test_file_path.exists():
+        # Check temp folder for recordings
+        temp_dir = project_root / "temp"
+        wav_files = list(temp_dir.glob("recording_*.wav")) if temp_dir.exists() else []
+
+        if wav_files:
+            # Use most recent recording
+            test_file_path = max(wav_files, key=lambda p: p.stat().st_mtime)
+            print(f"\nUsing most recent recording: {test_file_path.name}")
+        else:
+            print(f"\n✗ No test audio found!")
+            print(f"   Options:")
+            print(f"   1. Run: python src/core/recorder.py")
+            print(f"   2. Place a .wav file at: {test_file_path}")
+            print(f"   3. Record from temp folder: {temp_dir}")
+            return
+    else:
+        test_file_path = str(test_file_path)
 
     # Transcribe
-    print(f"\nTranscribing: {test_file}")
+    print(f"\nTranscribing: {test_file_path}")
     print("(this may take a few seconds...)")
 
-    result = transcriber.transcribe(test_file)
+    result = transcriber.transcribe(str(test_file_path))
 
     if result:
         print("\n" + "=" * 40)
@@ -216,7 +255,7 @@ def test_transcriber():
         print(result)
         print("=" * 40)
     else:
-        print("Transcription failed.")
+        print("✗ Transcription failed.")
 
 
 if __name__ == "__main__":

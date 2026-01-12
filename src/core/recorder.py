@@ -145,8 +145,15 @@ class AudioRecorder:
         Returns:
             Path to the saved .wav file
         """
-        # Create temp file
-        temp_file = tempfile.mktemp(suffix=".wav")
+        # Create temp directory in project root
+        project_root = Path(__file__).parent.parent.parent
+        temp_dir = project_root / "temp"
+        temp_dir.mkdir(exist_ok=True)
+
+        # Generate unique filename with timestamp
+        import time
+        timestamp = int(time.time() * 1000)
+        temp_file = str(temp_dir / f"recording_{timestamp}.wav")
 
         # Concatenate all frames
         audio_data = np.concatenate(self._recorded_frames, axis=0)
@@ -162,6 +169,21 @@ class AudioRecorder:
             wav_file.writeframes(audio_int16.tobytes())
 
         return temp_file
+
+    def cleanup_temp_files(self) -> None:
+        """
+        Delete all recording files from the temp directory.
+        Call this to free up disk space.
+        """
+        project_root = Path(__file__).parent.parent.parent
+        temp_dir = project_root / "temp"
+
+        if temp_dir.exists():
+            for file in temp_dir.glob("recording_*.wav"):
+                try:
+                    file.unlink()
+                except Exception as e:
+                    print(f"Warning: Could not delete {file}: {e}")
 
     def get_available_devices(self) -> list:
         """
