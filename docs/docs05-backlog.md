@@ -238,7 +238,73 @@ Implement tests in `tests/` directory.
 
 ---
 
+### Phase 10: Advanced Features (Post-MVP)
+
+**TASK-013 | Recording History Feature | Priority: P1 | Status: Done**
+
+Implement in-memory recording history with batch transcription.
+
+**Acceptance Criteria:**
+- [x] Create `src/models/recording.py` - Recording dataclass with properties
+- [x] Create `src/core/history_manager.py` - HistoryManager class for in-memory storage
+- [x] History UI in settings window (at TOP - first thing user sees):
+  - [x] Scrollable list with checkboxes for each recording
+  - [x] Shows filename, timestamp, file size, status (Ready/Done)
+  - [x] Transcript preview below transcribed items (truncated if long)
+  - [x] "Transcribe Selected" and "Delete Selected" buttons
+- [x] No auto-transcription: Recordings added to history for manual selection
+- [x] Window resize: 450x480 → 450x750 for new content
+- [x] Scrollable main body: CTkScrollableFrame for content overflow
+
+---
+
+**TASK-014 | File Upload Feature | Priority: P1 | Status: Done**
+
+Implement file upload for transcribing external audio files.
+
+**Acceptance Criteria:**
+- [x] "Transcribe from File" section in settings window
+- [x] Browse button opens file dialog (WAV, MP3, OGG, FLAC)
+- [x] File entry shows selected path
+- [x] Transcribe File button processes selected file
+- [x] Integration with existing transcriber and injector
+
+---
+
+**TASK-015 | Beep Sound Toggle Bug Fix | Priority: P0 | Status: Done**
+
+Fix beep sound toggle not taking effect after save.
+
+**Acceptance Criteria:**
+- [x] Config.reload_env() method to reload .env
+- [x] Config.save_beep_setting() updates both .env and os.environ
+- [x] Config.save_overlay_setting() updates both .env and os.environ
+- [x] Settings window uses new config methods
+- [x] Toggle takes effect immediately after save
+
+---
+
+**TASK-016 | UI Bug Fixes | Priority: P0 | Status: Done**
+
+Fix empty window bug and improve window behavior.
+
+**Acceptance Criteria:**
+- [x] Fix: SettingsWindow IS the main window (was creating two windows)
+- [x] Window close minimizes to tray instead of destroying
+- [x] Settings window opens on startup (UI-first)
+- [x] Hotkey display updated: Ctrl+Alt+Space → Ctrl+Alt+K
+- [x] CTkCheckBox fixed: hover_color, checkmark_color (was using unsupported arguments)
+
+---
+
 - [2026-01-12] Initial backlog creation
   - Added 12 tasks covering all project phases
   - All tasks derived from project_structure.md
   - Status: All tasks set to "Todo"
+
+- [2026-01-12] Phase 10 tasks added (Advanced Features)
+  - TASK-013: Recording History - In-memory storage, batch transcription, UI at top
+  - TASK-014: File Upload - External audio file transcription
+  - TASK-015: Beep Bug Fix - os.environ update for immediate effect
+  - TASK-016: UI Bug Fixes - Empty window, close behavior, hotkey display
+  - All Phase 10 tasks: Status = Done

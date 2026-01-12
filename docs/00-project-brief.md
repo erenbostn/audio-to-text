@@ -48,6 +48,27 @@
     - Clean shutdown with temp file cleanup
     - All dependencies installed via requirements.txt
 
+- [2026-01-12] UI Bug Fixes & Workflow Changes
+  - What changed: Fixed empty window bug, updated hotkey, changed recording workflow
+  - Affected area: src/main.py, src/ui/settings_window.py
+  - Notes:
+    - Fixed: SettingsWindow now IS the main window (was creating two windows before)
+    - Hotkey changed: Ctrl+Alt+Space → Ctrl+Alt+K (user preference)
+    - Window close now minimizes to tray instead of destroying
+    - Settings window opens on startup (UI-first approach)
+
+- [2026-01-12] Recording History & File Upload Features
+  - What changed: Added in-memory recording history with batch transcription, file upload support
+  - Affected area: src/models/recording.py (NEW), src/core/history_manager.py (NEW), src/ui/settings_window.py, src/main.py, src/config.py
+  - Notes:
+    - Recording History: Shows list of recordings with checkboxes, transcript preview, file details
+    - No auto-transcription: Recordings added to history for user to select manually
+    - File Upload: Browse button to transcribe external audio files
+    - Beep Bug Fix: Config now updates os.environ directly after save (toggle takes effect immediately)
+    - Window size: 450x480 → 450x750 (scrollable main body)
+    - Scrollable body: CTkScrollableFrame for content overflow
+    - History UI at TOP (first thing user sees)
+
 ---
 
 ## KNOWN ISSUES / UNKNOWNS (AI-maintained)
@@ -55,4 +76,6 @@
 > Open questions, assumptions, or risks discovered during implementation.
 > Append-only. Items are removed only when explicitly resolved.
 
+- [2026-01-12] [FIXED] Beep sound toggle not working after save - Fixed by updating os.environ directly
+- [2026-01-12] [FIXED] CTkCheckBox unsupported arguments - Changed to hover_color, checkmark_color
 - [YYYY-MM-DD] [UNKNOWN] Description of the uncertainty or risk

@@ -163,7 +163,8 @@ class GroqWhisperApp:
 
         # Add to history instead of auto-transcribing
         recording_id = self.history.add_recording(audio_file)
-        print(f"Recording saved to history: {recording_id}")
+        print(f"[DEBUG] Recording saved to history: {recording_id}")
+        print(f"[DEBUG] History count: {self.history.get_count()}")
 
         # Update settings button if visible
         if self._settings_window:

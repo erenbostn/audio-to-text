@@ -28,7 +28,7 @@ If a task requires changing any contract:
 **Purpose:** Toggle recording state via global keyboard combination
 
 **Contract:**
-- **Default Hotkey:** `Ctrl+Alt+Space`
+- **Default Hotkey:** `Ctrl+Alt+K` (changed from Ctrl+Alt+Space)
 - **Listener Type:** Global daemon thread (pynput.keyboard.GlobalHotKeys)
 - **Behavior:**
   - Press once: Start recording (if idle)

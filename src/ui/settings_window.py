@@ -638,7 +638,11 @@ class SettingsWindow(ctk.CTk):
 
     def _refresh_history(self) -> None:
         """Refresh the recording history list from app's history manager."""
-        if not self._app or not hasattr(self._app, 'history'):
+        if not self._app:
+            print("[DEBUG] _refresh_history: No _app reference")
+            return
+        if not hasattr(self._app, 'history'):
+            print("[DEBUG] _refresh_history: _app has no 'history' attribute")
             return
 
         # Clear existing items
@@ -649,6 +653,7 @@ class SettingsWindow(ctk.CTk):
 
         recordings = self._app.history.get_recordings()
         count = len(recordings)
+        print(f"[DEBUG] _refresh_history: Found {count} recordings")
 
         # Update label with count
         self._history_label.configure(text=f"Recording History ({count})")
@@ -702,9 +707,8 @@ class SettingsWindow(ctk.CTk):
             corner_radius=4,
             border_width=2,
             fg_color=("#333333", "#404040"),
-            progress_color=self.ACCENT_COLOR,
-            button_color=self.TEXT_PRIMARY,
-            button_hover_color=self.TEXT_PRIMARY,
+            hover_color=self.ACCENT_COLOR,
+            checkmark_color=self.TEXT_PRIMARY,
             command=lambda: self._on_history_checkbox_changed()
         )
         checkbox.pack(side="left", padx=(8, 8), pady=8)
@@ -830,17 +834,23 @@ class SettingsWindow(ctk.CTk):
             self._file_entry.delete(0, "end")
             self._file_entry.insert(0, file_path)
             self._transcribe_file_btn.configure(state="normal")
+            print(f"[DEBUG] Selected file: {self._selected_file}")
 
     def _transcribe_file(self) -> None:
         """Transcribe the selected file."""
         if not self._selected_file:
+            print("[DEBUG] No file selected")
             return
 
         if not self._app:
+            print("[DEBUG] No app reference")
             return
+
+        print(f"[DEBUG] Transcribing file: {self._selected_file}")
 
         try:
             text = self._app.transcriber.transcribe(self._selected_file, language="tr")
+            print(f"[DEBUG] Transcription result: {text[:50] if text else 'None'}...")
             if text:
                 self._app.injector.inject_text(text)
                 print(f"Transcribed file: {self._selected_file}")

@@ -107,6 +107,8 @@ class GroqTranscriber:
         Raises:
             Exception: If API call fails
         """
+        print(f"[DEBUG] Transcriber: Processing file: {audio_file_path}")
+
         # Read audio file
         with open(audio_file_path, "rb") as audio_file:
             # Get file size for validation
