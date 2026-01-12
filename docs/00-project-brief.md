@@ -156,6 +156,18 @@
     - Both buttons now on left side, matching history section layout
     - Keeps current behavior of showing only most recent transcription
 
+- [2026-01-12] File Transcriptions in History
+  - What changed: File upload transcriptions now added to Recording History with source indicator
+  - Affected area: src/models/recording.py, src/core/history_manager.py, src/ui/settings_window.py
+  - Notes:
+    - Added SourceType enum (RECORDING, FILE) to Recording model
+    - Added source field to Recording dataclass with default RECORDING (backward compatible)
+    - Updated HistoryManager.add_recording() to accept optional source parameter
+    - File transcriptions automatically added to history with source=FILE
+    - History UI shows emoji indicators: 📁 for files, 🎙 for recordings
+    - File transcriptions now persist in history (no longer disappear on next transcription)
+    - Users can select, copy, download, and delete file transcriptions like recordings
+
 ---
 
 ## KNOWN ISSUES / UNKNOWNS (AI-maintained)

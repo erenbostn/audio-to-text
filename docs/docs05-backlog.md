@@ -467,3 +467,24 @@ Add Download button to "Transcribe from File" transcription result area.
   - Added _download_file_transcript() method with file save dialog
   - Fixed Copy button layout from side="right" to side="left"
   - Status = Done
+
+---
+
+**TASK-026 | File Transcriptions in History | Priority: P0 | Status: Done**
+
+Add file upload transcriptions to Recording History with source indicator.
+
+**Acceptance Criteria:**
+- [x] Add SourceType enum (RECORDING, FILE) to Recording model
+- [x] Add source field to Recording dataclass with default RECORDING
+- [x] Update HistoryManager.add_recording() to accept source parameter
+- [x] File transcriptions added to history with source=FILE
+- [x] History UI shows source indicator: 📁 for files, 🎙 for recordings
+- [x] File transcriptions persist in history (no longer disappear)
+
+- [2026-01-12] TASK-026: File Transcriptions in History
+  - Added SourceType enum to Recording model
+  - Updated HistoryManager.add_recording() to accept source parameter
+  - Modified _on_transcription_complete() to add file transcriptions to history
+  - Updated _create_history_item() to show source emoji (📁/🎙)
+  - Status = Done

@@ -12,7 +12,7 @@ from typing import Callable
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from models.recording import Recording
+from models.recording import Recording, SourceType
 
 
 class HistoryManager:
@@ -27,12 +27,13 @@ class HistoryManager:
         """Initialize empty history."""
         self._recordings: dict[str, Recording] = {}
 
-    def add_recording(self, filepath: str) -> str:
+    def add_recording(self, filepath: str, source: SourceType = SourceType.RECORDING) -> str:
         """
         Add a recording to history.
 
         Args:
             filepath: Path to the audio file.
+            source: Whether this is from recording or file upload.
 
         Returns:
             The recording ID (timestamp).
@@ -43,7 +44,8 @@ class HistoryManager:
             filepath=filepath,
             created_at=datetime.now(),
             transcribed=False,
-            transcript=None
+            transcript=None,
+            source=source
         )
         self._recordings[recording_id] = recording
         return recording_id

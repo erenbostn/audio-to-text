@@ -14,6 +14,7 @@ import threading
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from config import Config
+from models.recording import SourceType
 
 
 class SettingsWindow(ctk.CTk):
@@ -918,13 +919,16 @@ class SettingsWindow(ctk.CTk):
         info_frame = ctk.CTkFrame(item_frame, fg_color="transparent")
         info_frame.pack(side="left", fill="both", expand=True, padx=(0, 8), pady=8)
 
-        # Filename with status
+        # Filename with status and source indicator
         status_text = "Done" if recording.transcribed else "Ready"
         status_color = "#27c93f" if recording.transcribed else "#888888"
 
+        # Add source indicator emoji
+        source_emoji = "📁" if recording.source == SourceType.FILE else "🎙"
+
         filename_label = ctk.CTkLabel(
             info_frame,
-            text=f"{recording.filename} [{status_text}]",
+            text=f"{source_emoji} {recording.filename} [{status_text}]",
             font=("Inter", 12, "normal"),
             text_color=self.TEXT_PRIMARY,
             anchor="w"
@@ -1164,7 +1168,19 @@ class SettingsWindow(ctk.CTk):
     def _on_transcription_complete(self, text: str, original_text: str, original_color):
         """Called when transcription completes successfully."""
         if text:
-            # Show result in UI (user can copy with button)
+            # Add to history with source=FILE (so it persists)
+            recording_id = self._app.history.add_recording(
+                self._selected_file,
+                source=SourceType.FILE
+            )
+
+            # Update with transcript
+            self._app.history.update_transcript(recording_id, text)
+
+            # Refresh history UI to show new item
+            self._refresh_history()
+
+            # Show result in UI (user can still see immediately)
             self._show_transcript_result(text)
 
             # Update button to success state

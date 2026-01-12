@@ -5,13 +5,20 @@ Represents a single audio recording with its transcription state.
 
 from dataclasses import dataclass, field
 from datetime import datetime
+from enum import Enum
 from pathlib import Path
+
+
+class SourceType(str, Enum):
+    """Source of the audio file."""
+    RECORDING = "recording"  # Made via app's recording feature
+    FILE = "file"            # Uploaded from external file
 
 
 @dataclass
 class Recording:
     """
-    Represents a single audio recording.
+    Represents a single audio recording or file upload.
 
     Attributes:
         id: Unique identifier (timestamp as string).
@@ -19,12 +26,14 @@ class Recording:
         created_at: When the recording was created.
         transcribed: Whether transcription is complete.
         transcript: Transcribed text (None if not transcribed).
+        source: Whether this is from recording or file upload.
     """
     id: str
     filepath: str
     created_at: datetime
     transcribed: bool = False
     transcript: str | None = None
+    source: SourceType = SourceType.RECORDING  # Default to RECORDING for backward compatibility
 
     @property
     def filename(self) -> str:
