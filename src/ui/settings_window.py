@@ -262,15 +262,16 @@ class SettingsWindow(ctk.CTk):
 
         self._hotkey_entry = ctk.CTkEntry(
             input_frame,
-            value="Ctrl + Alt + Space",
             font=("Segoe UI", 13),
             height=45,
             corner_radius=8,
             border_color=self.BORDER_COLOR,
-            fg_color=("gray17", "gray22"),
-            state="disabled"
+            fg_color=("gray17", "gray22")
         )
         self._hotkey_entry.pack(side="left", fill="x", expand=True)
+        # Set value and make read-only
+        self._hotkey_entry.insert(0, "Ctrl + Alt + Space")
+        self._hotkey_entry.configure(state="disabled")
 
         # Keyboard icon
         kb_icon = ctk.CTkLabel(
@@ -384,9 +385,16 @@ class SettingsWindow(ctk.CTk):
         if api_key:
             self._api_key_entry.insert(0, api_key)
 
-        # Load toggle states
-        self._beep_switch.set(self._config.play_beep())
-        self._overlay_switch.set(self._config.show_overlay())
+        # Load toggle states (CTkSwitch uses select()/deselect(), not set())
+        if self._config.play_beep():
+            self._beep_switch.select()
+        else:
+            self._beep_switch.deselect()
+
+        if self._config.show_overlay():
+            self._overlay_switch.select()
+        else:
+            self._overlay_switch.deselect()
 
     def _save_config(self):
         """Save configuration to .env file."""
