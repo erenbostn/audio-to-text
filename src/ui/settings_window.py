@@ -1,330 +1,322 @@
 """
 Settings Window - Configuration UI for GroqWhisper Desktop.
-A modern dark-themed window with glass effect styling.
+Based on html.md glass/acrylic design - CSS values mapped to CTk.
 """
 
 import customtkinter as ctk
 import tkinter as tk
-from tkinter import filedialog, messagebox
-from typing import Optional, Callable
+from tkinter import messagebox
+from typing import Callable
 import sys
 from pathlib import Path
 
-# Add parent directory to path for config import
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from config import Config
 
 
 class SettingsWindow(ctk.CTk):
     """
-    Main settings window for GroqWhisper Desktop.
+    Main settings window - CSS design from html.md.
 
-    Features:
-    - Dark theme with glass/acrylic effect
-    - API key configuration
-    - Microphone selection
-    - Hotkey display
-    - Toggle switches for preferences
-    - Save configuration to .env
+    CSS Variables → CTk:
+    --bg-color: #0c0c0c
+    --glass-bg: rgba(30, 30, 30, 0.6)
+    --glass-border: rgba(255, 255, 255, 0.1)
+    --accent-color: #FF6B35
+    --input-bg: rgba(0, 0, 0, 0.3)
     """
 
-    # Color scheme from html.md design
-    ACCENT_COLOR = "#FF6B35"          # Orange for buttons/accents
-    BG_COLOR = "#0c0c0c"              # Deep charcoal background
-    GLASS_BG = ("gray10", "gray15")   # Semi-transparent glass
-    TEXT_PRIMARY = "#ffffff"          # White
-    TEXT_SECONDARY = "#a0a0a0"        # Gray
-    BORDER_COLOR = ("gray20", "gray25")
+    # CSS :root variables
+    BG_COLOR = "#0c0c0c"
+    GLASS_BG = ("#2a2a2e", "#323238")  # rgba(30,30,30,0.6) approximation
+    GLASS_BORDER = ("#3a3a3e", "#4a4a4e")  # rgba(255,255,255,0.1)
+    ACCENT_COLOR = "#FF6B35"
+    ACCENT_GLOW = ("#E55A25", "#FF6B35")  # rgba(255,107,53,0.4) glow
+    TEXT_PRIMARY = "#ffffff"
+    TEXT_SECONDARY = "#a0a0a0"
+    INPUT_BG = ("#1a1a1a", "#222222")  # rgba(0,0,0,0.3)
+    INPUT_BORDER = ("#2a2a2a", "#333333")  # rgba(255,255,255,0.1)
+    DANGER_COLOR = "#ff3b30"
 
     def __init__(self, config: Config = None, on_save: Callable = None, **kwargs):
-        """
-        Initialize the settings window.
-
-        Args:
-            config: Configuration object (creates new if None)
-            on_save: Callback function when settings are saved
-            **kwargs: Additional arguments for CTk
-        """
         super().__init__(**kwargs)
 
-        # Initialize config
         self._config = config if config else Config()
         self._on_save_callback = on_save
 
-        # Window setup
         self._setup_window()
-
-        # Create UI
         self._create_ui()
-
-        # Load current settings
         self._load_settings()
 
     def _setup_window(self):
-        """Configure window properties."""
+        """Configure window - CSS body styling."""
         self.title("GroqWhisper Settings")
-        self.geometry("520x500")
+        self.geometry("450x480")
 
-        # Center window on screen
+        # Deep background --bg-color: #0c0c0c
+        self.configure(fg_color=self.BG_COLOR)
+
+        # Center
         self._center_window()
 
-        # Glass effect (semi-transparent)
-        self.attributes("-alpha", 0.95)
-
-        # Window icon (if available)
-        try:
-            self.iconbitmap("assets/icon.ico")
-        except Exception:
-            pass
-
     def _center_window(self):
-        """Center the window on the screen."""
         self.update_idletasks()
-        width = 520
-        height = 500
-        x = (self.winfo_screenwidth() // 2) - (width // 2)
-        y = (self.winfo_screenheight() // 2) - (height // 2)
+        width, height = 450, 480
+        x = (self.winfo_screenwidth() - width) // 2
+        y = (self.winfo_screenheight() - height) // 2
         self.geometry(f"{width}x{height}+{x}+{y}")
 
     def _create_ui(self):
-        """Create all UI components."""
-        # Main container with glass effect
-        main_frame = ctk.CTkFrame(
+        """Glass window from CSS .glass-window"""
+        # Main glass frame
+        # background: rgba(30, 30, 30, 0.6)
+        # border: 1px solid rgba(255, 255, 255, 0.1)
+        # border-radius: 16px
+        # box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6)
+        glass_frame = ctk.CTkFrame(
             self,
             fg_color=self.GLASS_BG,
             corner_radius=16,
-            border_color=self.BORDER_COLOR,
+            border_color=self.GLASS_BORDER,
             border_width=1
         )
-        main_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        glass_frame.pack(fill="both", expand=True, padx=20, pady=20)
 
-        # Header section
-        self._create_header(main_frame)
+        # Window header - .window-header { padding: 16px 24px }
+        self._create_header(glass_frame)
 
-        # Form section
-        self._create_form(main_frame)
+        # Window body - .window-body { padding: 24px; gap: 20px }
+        body_frame = ctk.CTkFrame(glass_frame, fg_color="transparent")
+        body_frame.pack(fill="both", expand=True, padx=24, pady=(0, 24))
 
-        # Save button
-        self._create_save_button(main_frame)
+        # Form groups with gap: 20px
+        self._create_api_key_field(body_frame)
+        self._create_mic_dropdown(body_frame)
+        self._create_hotkey_field(body_frame)
+        self._create_toggles(body_frame)
+        self._create_save_button(body_frame)
 
     def _create_header(self, parent):
-        """Create window header with title and control dots."""
+        """Window header with title and dots - .window-header"""
+        # Header container
         header = ctk.CTkFrame(parent, fg_color="transparent")
-        header.pack(fill="x", pady=(20, 20), padx=20)
+        header.pack(fill="x", pady=(16, 0))
 
-        # Title label
+        # Title - .window-title { font-size: 14px; font-weight: 500 }
         title = ctk.CTkLabel(
             header,
             text="GroqWhisper Settings",
-            font=("Segoe UI", 18, "bold"),
-            text_color=self.TEXT_PRIMARY,
-            anchor="w"
+            font=("Inter", 14, "normal"),
+            text_color=self.TEXT_PRIMARY
         )
-        title.pack(side="left", fill="x", expand=True)
+        title.pack(side="left")
 
-        # Control dots (visual only - macOS style)
+        # Control dots - .control-dot { width: 12px; height: 12px }
         dots_frame = ctk.CTkFrame(header, fg_color="transparent")
         dots_frame.pack(side="right")
 
-        # Minimize dot (yellow)
-        min_dot = tk.Label(
-            dots_frame,
-            bg="#ffbd2e",
-            width=12,
-            height=12,
-            cursor="hand2"
+        # Gap: 8px between dots
+        gap = 8
+        dot_size = 12
+
+        # Close - #ff5f56
+        self._create_dot(dots_frame, "#ff5f56", dot_size, lambda e: self.destroy(), gap)
+        # Minimize - #ffbd2e
+        self._create_dot(dots_frame, "#ffbd2e", dot_size, lambda e: self.iconify(), gap)
+        # Maximize - #27c93f
+        self._create_dot(dots_frame, "#27c93f", dot_size, lambda e: self._toggle_maximize(), 0)
+
+        # Border bottom - border-bottom: 1px solid rgba(255, 255, 255, 0.05)
+        border = ctk.CTkFrame(parent, fg_color=("#1a1a1a", "#222222"), height=1)
+        border.pack(fill="x", pady=(16, 0))
+
+    def _create_dot(self, parent, color, size, command, padx):
+        """Create control dot - .control-dot"""
+        frame = ctk.CTkFrame(parent, fg_color="transparent", width=size, height=size)
+        if padx > 0:
+            frame.pack(side="left", padx=padx)
+        else:
+            frame.pack(side="left")
+
+        canvas = tk.Canvas(
+            frame,
+            width=size,
+            height=size,
+            bg="#1e1e1e",
+            highlightthickness=0
         )
-        min_dot.pack(side="left", padx=2)
-        min_dot.bind("<Button-1>", lambda e: self.iconify())
-
-        # Maximize dot (green)
-        max_dot = tk.Label(
-            dots_frame,
-            bg="#27c93f",
-            width=12,
-            height=12,
-            cursor="hand2"
-        )
-        max_dot.pack(side="left", padx=2)
-        max_dot.bind("<Button-1>", self._toggle_maximize)
-
-        # Close dot (red)
-        close_dot = tk.Label(
-            dots_frame,
-            bg="#ff5f56",
-            width=12,
-            height=12,
-            cursor="hand2"
-        )
-        close_dot.pack(side="left", padx=2)
-        close_dot.bind("<Button-1>", lambda e: self.destroy())
-
-    def _create_form(self, parent):
-        """Create the settings form with all input fields."""
-        form_frame = ctk.CTkFrame(parent, fg_color="transparent")
-        form_frame.pack(fill="both", expand=True, padx=20, pady=(0, 20))
-
-        # API Key field
-        self._create_api_key_field(form_frame)
-
-        # Microphone dropdown
-        self._create_mic_dropdown(form_frame)
-
-        # Hotkey display
-        self._create_hotkey_field(form_frame)
-
-        # Toggles section
-        self._create_toggles(form_frame)
+        canvas.pack()
+        canvas.create_oval(0, 0, size, size, fill=color, outline="")
+        canvas.bind("<Button-1>", command)
 
     def _create_api_key_field(self, parent):
-        """Create API key input field."""
-        # Label
+        """API Key field - .form-group with .input-field"""
+        # Form group - gap: 8px
+        form_frame = ctk.CTkFrame(parent, fg_color="transparent")
+        form_frame.pack(fill="x", pady=(0, 20))
+
+        # Label - .form-label { font-size: 12px; color: var(--text-secondary) }
         label = ctk.CTkLabel(
-            parent,
+            form_frame,
             text="Groq API Key",
-            font=("Segoe UI", 11),
+            font=("Inter", 12, "normal"),
             text_color=self.TEXT_SECONDARY,
             anchor="w"
         )
-        label.pack(fill="x", pady=(0, 8), padx=5)
+        label.pack(fill="x", pady=(0, 8))
 
-        # Input container with icon
-        input_frame = ctk.CTkFrame(parent, fg_color="transparent")
-        input_frame.pack(fill="x", pady=(0, 20))
+        # Input wrapper
+        input_frame = ctk.CTkFrame(form_frame, fg_color="transparent")
+        input_frame.pack(fill="x")
 
-        # Password entry field
+        # Input field - CSS: background: var(--input-bg), border: 1px solid rgba(255,255,255,0.1)
         self._api_key_entry = ctk.CTkEntry(
             input_frame,
             placeholder_text="gsk_...",
             show="•",
-            font=("Segoe UI", 13),
-            height=45,
+            font=("Inter", 14, "normal"),
+            height=45,  # padding: 12px 16px ≈ 45px
             corner_radius=8,
-            border_color=self.BORDER_COLOR,
-            fg_color=("gray15", "gray20"),
-            placeholder_text_color=self.TEXT_SECONDARY
+            border_color=self.INPUT_BORDER,
+            border_width=1,
+            fg_color=self.INPUT_BG,
+            placeholder_text_color=self.TEXT_SECONDARY,
+            text_color=self.TEXT_PRIMARY
         )
         self._api_key_entry.pack(side="left", fill="x", expand=True)
 
-        # Key icon label (visual)
-        key_icon = ctk.CTkLabel(
+        # Icon - .input-icon { right: 12px; font-size: 18px }
+        icon = ctk.CTkLabel(
             input_frame,
             text="🔑",
-            font=("Segoe UI", 14),
-            width=40
+            font=("Segoe UI", 16),
+            width=30
         )
-        key_icon.pack(side="right", padx=(10, 0))
+        icon.pack(side="right", padx=(8, 0))
 
     def _create_mic_dropdown(self, parent):
-        """Create microphone selection dropdown."""
-        # Label
+        """Microphone dropdown"""
+        form_frame = ctk.CTkFrame(parent, fg_color="transparent")
+        form_frame.pack(fill="x", pady=(0, 20))
+
         label = ctk.CTkLabel(
-            parent,
+            form_frame,
             text="Input Device",
-            font=("Segoe UI", 11),
+            font=("Inter", 12, "normal"),
             text_color=self.TEXT_SECONDARY,
             anchor="w"
         )
-        label.pack(fill="x", pady=(0, 8), padx=5)
+        label.pack(fill="x", pady=(0, 8))
 
-        # Dropdown
-        # Get available microphones
         mic_list = self._get_available_mics()
-
         self._mic_dropdown = ctk.CTkOptionMenu(
-            parent,
+            form_frame,
             values=mic_list,
-            font=("Segoe UI", 13),
+            font=("Inter", 14, "normal"),
             height=45,
             corner_radius=8,
-            fg_color=("gray15", "gray20"),
+            fg_color=self.INPUT_BG,
             button_color=self.ACCENT_COLOR,
-            button_hover_color="#E55A2B",
-            dropdown_font=("Segoe UI", 12)
+            button_hover_color=self.ACCENT_GLOW,
+            dropdown_font=("Inter", 13),
+            dropdown_fg_color=self.GLASS_BG,
+            dropdown_hover_color=self.ACCENT_COLOR,
+            dropdown_text_color=self.TEXT_PRIMARY,
+            text_color=self.TEXT_PRIMARY,
+            anchor="w"
         )
-        self._mic_dropdown.pack(fill="x", pady=(0, 20))
+        self._mic_dropdown.pack(fill="x")
 
     def _create_hotkey_field(self, parent):
-        """Create hotkey display field (read-only)."""
-        # Label
+        """Hotkey display - read-only"""
+        form_frame = ctk.CTkFrame(parent, fg_color="transparent")
+        form_frame.pack(fill="x", pady=(0, 20))
+
         label = ctk.CTkLabel(
-            parent,
+            form_frame,
             text="Activation Hotkey",
-            font=("Segoe UI", 11),
+            font=("Inter", 12, "normal"),
             text_color=self.TEXT_SECONDARY,
             anchor="w"
         )
-        label.pack(fill="x", pady=(0, 8), padx=5)
+        label.pack(fill="x", pady=(0, 8))
 
-        # Read-only display
-        input_frame = ctk.CTkFrame(parent, fg_color="transparent")
-        input_frame.pack(fill="x", pady=(0, 20))
+        input_frame = ctk.CTkFrame(form_frame, fg_color="transparent")
+        input_frame.pack(fill="x")
 
         self._hotkey_entry = ctk.CTkEntry(
             input_frame,
-            font=("Segoe UI", 13),
+            font=("Inter", 14, "normal"),
             height=45,
             corner_radius=8,
-            border_color=self.BORDER_COLOR,
-            fg_color=("gray17", "gray22")
+            border_color=self.INPUT_BORDER,
+            border_width=1,
+            fg_color=self.INPUT_BG,
+            text_color="#666666"
         )
         self._hotkey_entry.pack(side="left", fill="x", expand=True)
-        # Set value and make read-only
         self._hotkey_entry.insert(0, "Ctrl + Alt + Space")
         self._hotkey_entry.configure(state="disabled")
 
-        # Keyboard icon
-        kb_icon = ctk.CTkLabel(
+        icon = ctk.CTkLabel(
             input_frame,
             text="⌨",
-            font=("Segoe UI", 14),
-            width=40
+            font=("Segoe UI", 16),
+            width=30
         )
-        kb_icon.pack(side="right", padx=(10, 0))
+        icon.pack(side="right", padx=(8, 0))
 
     def _create_toggles(self, parent):
-        """Create toggle switches for preferences."""
+        """Toggle switches - .toggle-switch CSS"""
+        form_frame = ctk.CTkFrame(parent, fg_color="transparent")
+        form_frame.pack(fill="x", pady=(0, 20))
+
         # Section label
-        section_label = ctk.CTkLabel(
-            parent,
+        label = ctk.CTkLabel(
+            form_frame,
             text="Preferences",
-            font=("Segoe UI", 11),
+            font=("Inter", 12, "normal"),
             text_color=self.TEXT_SECONDARY,
             anchor="w"
         )
-        section_label.pack(fill="x", pady=(0, 12), padx=5)
+        label.pack(fill="x", pady=(0, 8))
 
-        # Beep Sound toggle
-        beep_row = ctk.CTkFrame(parent, fg_color="transparent")
-        beep_row.pack(fill="x", pady=(0, 12))
+        # Beep Sound - .settings-row
+        beep_row = ctk.CTkFrame(form_frame, fg_color="transparent")
+        beep_row.pack(fill="x", pady=(8, 0))
 
         beep_label = ctk.CTkLabel(
             beep_row,
             text="Play Beep Sound",
-            font=("Segoe UI", 13),
+            font=("Inter", 14, "normal"),
             text_color=self.TEXT_PRIMARY
         )
         beep_label.pack(side="left")
 
+        # Toggle - width: 44px, height: 24px, background: rgba(255,255,255,0.1)
         self._beep_switch = ctk.CTkSwitch(
             beep_row,
             text="",
-            width=50,
+            width=44,
+            height=24,
             progress_color=self.ACCENT_COLOR,
             button_color=self.TEXT_PRIMARY,
-            fg_color=("gray30", "gray35"),
-            button_hover_color=self.TEXT_PRIMARY
+            button_hover_color=self.TEXT_PRIMARY,
+            fg_color=("#333333", "#404040"),  # rgba(255,255,255,0.1)
+            corner_radius=12,
+            switch_width=44,
+            switch_height=24
         )
         self._beep_switch.pack(side="right")
 
-        # Show Overlay toggle
-        overlay_row = ctk.CTkFrame(parent, fg_color="transparent")
-        overlay_row.pack(fill="x", pady=(0, 12))
+        # Show Overlay
+        overlay_row = ctk.CTkFrame(form_frame, fg_color="transparent")
+        overlay_row.pack(fill="x", pady=(8, 0))
 
         overlay_label = ctk.CTkLabel(
             overlay_row,
             text="Show Floating Overlay",
-            font=("Segoe UI", 13),
+            font=("Inter", 14, "normal"),
             text_color=self.TEXT_PRIMARY
         )
         overlay_label.pack(side="left")
@@ -332,60 +324,53 @@ class SettingsWindow(ctk.CTk):
         self._overlay_switch = ctk.CTkSwitch(
             overlay_row,
             text="",
-            width=50,
+            width=44,
+            height=24,
             progress_color=self.ACCENT_COLOR,
             button_color=self.TEXT_PRIMARY,
-            fg_color=("gray30", "gray35"),
-            button_hover_color=self.TEXT_PRIMARY
+            button_hover_color=self.TEXT_PRIMARY,
+            fg_color=("#333333", "#404040"),
+            corner_radius=12,
+            switch_width=44,
+            switch_height=24
         )
         self._overlay_switch.pack(side="right")
 
     def _create_save_button(self, parent):
-        """Create save configuration button."""
-        btn_frame = ctk.CTkFrame(parent, fg_color="transparent")
-        btn_frame.pack(fill="x", padx=20, pady=(0, 20))
-
+        """Save button - .btn-save CSS"""
+        # background: var(--accent-color)
+        # box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4)
+        # padding: 14px, border-radius: 8px
         self._save_button = ctk.CTkButton(
-            btn_frame,
+            parent,
             text="Save Configuration",
-            font=("Segoe UI", 14, "bold"),
-            height=45,
+            font=("Inter", 14, "bold"),
+            height=48,  # padding: 14px top/bottom
             corner_radius=8,
             fg_color=self.ACCENT_COLOR,
-            hover_color="#E55A2B",
-            command=self._save_config
+            hover_color=self.ACCENT_GLOW,
+            text_color=self.TEXT_PRIMARY,
+            border_width=0
         )
-        self._save_button.pack(fill="x")
+        self._save_button.pack(fill="x", pady=(8, 0))
 
     def _get_available_mics(self) -> list:
-        """
-        Get list of available microphones.
-
-        Returns:
-            List of microphone device names
-        """
-        # Try to get actual audio devices
         try:
             import sounddevice as sd
             devices = sd.query_devices()
             mics = []
-            for i, device in enumerate(devices):
+            for device in devices:
                 if device['max_input_channels'] > 0:
-                    name = device['name']
-                    mics.append(f"{name}")
+                    mics.append(device['name'])
             return mics if mics else ["Default Microphone"]
         except Exception:
-            # Fallback if sounddevice not available
-            return ["Default Microphone", "External USB Mic"]
+            return ["Default Microphone"]
 
     def _load_settings(self):
-        """Load current settings from config."""
-        # Load API key
         api_key = self._config.get_api_key()
         if api_key:
             self._api_key_entry.insert(0, api_key)
 
-        # Load toggle states (CTkSwitch uses select()/deselect(), not set())
         if self._config.play_beep():
             self._beep_switch.select()
         else:
@@ -397,13 +382,10 @@ class SettingsWindow(ctk.CTk):
             self._overlay_switch.deselect()
 
     def _save_config(self):
-        """Save configuration to .env file."""
-        # Get values from form
         api_key = self._api_key_entry.get().strip()
         play_beep = self._beep_switch.get()
         show_overlay = self._overlay_switch.get()
 
-        # Validate API key
         if not api_key or api_key == "gsk_...":
             messagebox.showwarning(
                 "Invalid API Key",
@@ -411,17 +393,11 @@ class SettingsWindow(ctk.CTk):
             )
             return
 
-        # Save to config
         try:
             self._config.save_api_key(api_key)
-
-            # Update .env with toggle values (read and rewrite)
             self._save_toggle_settings(play_beep, show_overlay)
-
-            # Show success feedback
             self._show_save_success()
 
-            # Call callback if provided
             if self._on_save_callback:
                 self._on_save_callback()
 
@@ -432,47 +408,37 @@ class SettingsWindow(ctk.CTk):
             )
 
     def _save_toggle_settings(self, play_beep: bool, show_overlay: bool):
-        """Save toggle settings to .env file."""
         import os
         from dotenv import load_dotenv
 
         env_path = self._config.env_path
         load_dotenv(env_path)
 
-        # Read current content
         content = ""
         if env_path.exists():
             with open(env_path, "r", encoding="utf-8") as f:
                 content = f.read()
 
         lines = content.split("\n")
-        updated = False
 
-        # Update or add PLAY_BEEP_SOUND
         for i, line in enumerate(lines):
             if line.startswith("PLAY_BEEP_SOUND="):
                 lines[i] = f"PLAY_BEEP_SOUND={'true' if play_beep else 'false'}"
-                updated = True
                 break
-        if not updated:
+        else:
             lines.append(f"PLAY_BEEP_SOUND={'true' if play_beep else 'false'}")
 
-        updated = False
-        # Update or add SHOW_OVERLAY
         for i, line in enumerate(lines):
             if line.startswith("SHOW_OVERLAY="):
                 lines[i] = f"SHOW_OVERLAY={'true' if show_overlay else 'false'}"
-                updated = True
                 break
-        if not updated:
+        else:
             lines.append(f"SHOW_OVERLAY={'true' if show_overlay else 'false'}")
 
-        # Write back
         with open(env_path, "w", encoding="utf-8") as f:
             f.write("\n".join(lines))
 
     def _show_save_success(self):
-        """Show visual feedback for successful save."""
         original_text = self._save_button.cget("text")
         original_color = self._save_button.cget("fg_color")
 
@@ -481,30 +447,23 @@ class SettingsWindow(ctk.CTk):
             fg_color="#27c93f"
         )
 
-        # Reset after 1.5 seconds
         self.after(1500, lambda: self._save_button.configure(
             text=original_text,
             fg_color=original_color
         ))
 
     def _toggle_maximize(self, event=None):
-        """Toggle window maximized state."""
         if self.attributes('-zoomed'):
             self.attributes('-zoomed', False)
         else:
             self.attributes('-zoomed', True)
 
 
-# Standalone test function
 def test_settings_window():
-    """Test the settings window standalone."""
     ctk.set_appearance_mode("Dark")
     ctk.set_default_color_theme("dark-blue")
 
-    # Create config
     config = Config()
-
-    # Create window
     window = SettingsWindow(config)
     window.mainloop()
 

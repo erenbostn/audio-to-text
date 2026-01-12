@@ -30,15 +30,15 @@ Clear and concise description of the task or problem.
 
 ### Phase 1: Project Setup
 
-**TASK-001 | Initial Project Structure | Priority: P0 | Status: Todo**
+**TASK-001 | Initial Project Structure | Priority: P0 | Status: Done**
 
 Setup the directory structure and Python environment as defined in `project_structure.md`.
 
 **Acceptance Criteria:**
-- [ ] Create `src/` directory with subdirectories: `core/`, `ui/`, `utils/`
-- [ ] Create `tests/` directory
-- [ ] Create `.env.example` file with GROQ_API_KEY template
-- [ ] Create `requirements.txt` with all dependencies:
+- [x] Create `src/` directory with subdirectories: `core/`, `ui/`, `utils/`
+- [x] Create `tests/` directory
+- [x] Create `.env.example` file with GROQ_API_KEY template
+- [x] Create `requirements.txt` with all dependencies:
   - customtkinter
   - sounddevice
   - numpy
@@ -48,8 +48,8 @@ Setup the directory structure and Python environment as defined in `project_stru
   - groq
   - python-dotenv
   - pyautogui (or keyboard)
-- [ ] Create empty `__init__.py` files in each package directory
-- [ ] Verify venv is activated and dependencies are installable
+- [x] Create empty `__init__.py` files in each package directory
+- [x] Verify venv is activated and dependencies are installable
 
 ---
 
@@ -102,40 +102,39 @@ Implement `src/core/input_simulator.py` for keyboard text injection.
 
 ### Phase 5: UI - Overlay
 
-**TASK-005 | Floating Status Overlay | Priority: P0 | Status: Todo**
+**TASK-005 | Floating Status Overlay | Priority: P0 | Status: Done**
 
 Implement `src/ui/overlay.py` - frameless recording status widget per html.md design.
 
 **Acceptance Criteria:**
-- [ ] CTkToplevel with overrideredirect(True) and attributes('-topmost', True)
-- [ ] Shows/hides based on recording state
-- [ ] Contains:
+- [x] CTkToplevel with overrideredirect(True) and attributes('-topmost', True)
+- [x] Shows/hides based on recording state
+- [x] Contains:
   - Microphone icon with pulse animation
   - "Recording..." status text
   - Animated waveform bars (5 bars)
-- [ ] Dark theme with glass/acrylic styling
-- [ ] Accent color #FF6B35 for active elements
-- [ ] Optionally draggable
+- [x] Dark theme with glass/acrylic styling
+- [x] Accent color #FF6B35 for active elements
+- [x] Optionally draggable
 
 ---
 
 ### Phase 6: UI - Settings Window
 
-**TASK-006 | Settings Configuration Window | Priority: P1 | Status: Todo**
+**TASK-006 | Settings Configuration Window | Priority: P1 | Status: Done**
 
 Implement `src/ui/settings_window.py` per html.md design and CFG-001 contract.
 
 **Acceptance Criteria:**
-- [ ] CTk main window with dark theme
-- [ ] Form fields:
+- [x] CTk main window with dark theme
+- [x] Form fields:
   - API Key (password entry, masked)
   - Microphone dropdown (populated from system devices)
   - Hotkey display (read-only text: "Ctrl + Alt + Space")
   - Beep sound toggle (CTkSwitch)
   - Overlay visibility toggle (CTkSwitch)
-- [ ] Save button that writes to .env
-- [ ] Close/Cancel button
-- [ ] Glass window styling per html.md
+- [x] Save button that writes to .env
+- [x] Glass window styling per html.md (CSS values mapped to CTk)
 
 ---
 

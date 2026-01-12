@@ -15,6 +15,16 @@
     - Created 12-task backlog spanning 9 phases (Project Setup → Core → UI → Main → Utilities → Docs/Tests)
     - All documentation follows ai.md protocol (append-only, docs as canonical source)
 
+- [2026-01-12] UI Implementation Phase 1 Complete
+  - What changed: Implemented core UI components (overlay, settings window) with customtkinter
+  - Affected area: src/ui/overlay.py, src/ui/settings_window.py, src/config.py, src/main.py (placeholder)
+  - Notes:
+    - TASK-001 (Project Setup): Complete - directory structure, requirements.txt, .env.example created
+    - TASK-005 (Overlay): Complete - frameless CTkToplevel with Canvas waveform animation, pulse effect, show/hide methods
+    - TASK-006 (Settings Window): Complete - glass effect styling, API key form, mic dropdown, toggles, .env save/load
+    - CSS → CTk mapping: html.md CSS values translated to customtkinter properties
+    - Design note: Settings window styling to be refined later (user deferred)
+
 ---
 
 ## KNOWN ISSUES / UNKNOWNS (AI-maintained)
