@@ -413,3 +413,19 @@ Fix AttributeError when transcribing from file in threaded context.
 - [2026-01-12] TASK-022: File Upload Threading Bug Fix
   - Fixed self.root.after() AttributeError (should be self.after())
   - Status = Done
+
+---
+
+**TASK-023 | File Upload Transcription Result Bugs | Priority: P0 | Status: Done**
+
+Fix duplicate text and unintended text injection in file upload transcription.
+
+**Acceptance Criteria:**
+- [x] Fix duplicate text: CTkTextbox now fully clears before new insert (delete "1.0" to "end-1c" + update())
+- [x] Fix file path pollution: Removed injector.inject_text() call (was injecting to cursor position)
+- [x] User can now copy text via "Copy to Clipboard" button instead
+
+- [2026-01-12] TASK-023: File Upload Transcription Result Bugs
+  - Fixed duplicate text in transcription results
+  - Fixed transcribed text appearing in file path entry
+  - Status = Done

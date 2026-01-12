@@ -124,6 +124,14 @@
     - Root cause: SettingsWindow IS the CTk root, has no .root attribute
     - Thread-safe UI updates now work correctly
 
+- [2026-01-12] File Upload Transcription Result Bugs
+  - What changed: Fixed duplicate text and file path pollution in file upload transcription
+  - Affected area: src/ui/settings_window.py
+  - Notes:
+    - Bug 1 Fixed: CTkTextbox now fully clears before new insert (delete "1.0" to "end-1c" + update())
+    - Bug 2 Fixed: Removed injector.inject_text() call (was injecting to cursor position, causing file path entry pollution)
+    - User now uses "Copy to Clipboard" button to get transcription text
+
 ---
 
 ## KNOWN ISSUES / UNKNOWNS (AI-maintained)

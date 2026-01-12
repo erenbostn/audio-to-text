@@ -966,8 +966,13 @@ class SettingsWindow(ctk.CTk):
         self._transcript_result_text.pack(fill="x")
         self._copy_result_btn_frame.pack(fill="x", pady=(8, 0))
 
-        # Insert text
-        self._transcript_result_text.delete("1.0", "end")
+        # Force update to ensure widget is ready
+        self._transcript_result_text.update()
+
+        # Clear ALL existing content (use "1.0" to "end-1c" to ensure full clear)
+        self._transcript_result_text.delete("1.0", "end-1c")
+
+        # Insert new text
         self._transcript_result_text.insert("1.0", text)
 
         # Reset text color (in case it was error red)
@@ -1033,14 +1038,8 @@ class SettingsWindow(ctk.CTk):
     def _on_transcription_complete(self, text: str, original_text: str, original_color):
         """Called when transcription completes successfully."""
         if text:
-            # Show result in UI
+            # Show result in UI (user can copy with button)
             self._show_transcript_result(text)
-
-            # Still inject text for user convenience
-            try:
-                self._app.injector.inject_text(text)
-            except:
-                pass  # Injection is optional, don't fail if it doesn't work
 
             # Update button to success state
             self._transcribe_file_btn.configure(
