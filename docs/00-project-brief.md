@@ -25,6 +25,29 @@
     - CSS → CTk mapping: html.md CSS values translated to customtkinter properties
     - Design note: Settings window styling to be refined later (user deferred)
 
+- [2026-01-12] Backend Core Modules Complete
+  - What changed: Implemented three core backend modules (recorder, transcriber, input_simulator)
+  - Affected area: src/core/recorder.py, src/core/transcriber.py, src/core/input_simulator.py
+  - Notes:
+    - TASK-002 (Audio Recorder): Complete - sounddevice + numpy, non-blocking threading, project_root/temp/ for files
+    - TASK-003 (Groq Transcriber): Complete - whisper-large-v3 model, Turkish language support, retry logic
+    - TASK-004 (Text Injection): Complete - clipboard-based (pyperclip) for full Unicode including Turkish characters
+    - Added pyperclip>=1.8.0 to requirements.txt
+    - Created .gitignore for .env, venv/, temp/, *.wav protection
+    - Turkish transcription accuracy fix: Added `language="tr"` parameter to Groq API call
+
+- [2026-01-12] Main Application Bootstrap Complete (TASK-007, TASK-008, TASK-010)
+  - What changed: Implemented system tray, sound feedback, and main application orchestrator
+  - Affected area: src/ui/tray.py, src/utils/sound_feedback.py, src/main.py
+  - Notes:
+    - TASK-007 (System Tray): Complete - pystray integration with menu (Restore, Quit), programmatically generated mic icon
+    - TASK-008 (Main Entry Point): Complete - GroqWhisperApp class with hotkey → recorder → transcriber → injector workflow
+    - TASK-010 (Sound Feedback): Complete - winsound-based beep sounds (1000Hz start, 700Hz stop)
+    - Global hotkey (Ctrl+Alt+Space) toggles recording
+    - API key validation on startup, opens settings if missing
+    - Clean shutdown with temp file cleanup
+    - All dependencies installed via requirements.txt
+
 ---
 
 ## KNOWN ISSUES / UNKNOWNS (AI-maintained)

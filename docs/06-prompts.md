@@ -14,7 +14,7 @@ Do not infer rules from this file if they conflict with .ai/AI.md.
 Use this at the start of any new chat or tool session.
 
 Read `.ai/AI.md` and follow it as the only operating protocol.
-Bootstrap using the listed canonical docs (or `context.txt` if present).
+Bootstrap using the listed canonical docs 
 Implement the task with minimal scope, update docs per the matrix (append-only),
 and output only the Task Completion Summary.
 

@@ -52,12 +52,13 @@ class GroqTranscriber:
 
         self.client = Groq(api_key=api_key)
 
-    def transcribe(self, audio_file_path: str) -> Optional[str]:
+    def transcribe(self, audio_file_path: str, language: str = "tr") -> Optional[str]:
         """
         Transcribe an audio file using Groq's Whisper API.
 
         Args:
             audio_file_path: Path to the audio file (.wav, .mp3, etc.)
+            language: Language code (default: "tr" for Turkish)
 
         Returns:
             Transcribed text as string, or None if transcription failed
@@ -70,7 +71,7 @@ class GroqTranscriber:
         # Try transcription with retry logic
         for attempt in range(self.MAX_RETRIES):
             try:
-                result = self._transcribe_once(audio_file_path)
+                result = self._transcribe_once(audio_file_path, language)
                 return result
 
             except Exception as e:
@@ -92,12 +93,13 @@ class GroqTranscriber:
 
         return None
 
-    def _transcribe_once(self, audio_file_path: str) -> str:
+    def _transcribe_once(self, audio_file_path: str, language: str = "tr") -> str:
         """
         Perform a single transcription attempt.
 
         Args:
             audio_file_path: Path to the audio file
+            language: Language code for transcription
 
         Returns:
             Transcribed text
@@ -118,11 +120,12 @@ class GroqTranscriber:
             # Create filename for API (Groq needs the original filename)
             filename = Path(audio_file_path).name
 
-            # Call Groq API
+            # Call Groq API with language parameter
             transcription = self.client.audio.transcriptions.create(
                 file=(filename, audio_file.read()),
                 model=self.MODEL,
-                response_format="text"
+                response_format="text",
+                language=language
             )
 
         return transcription

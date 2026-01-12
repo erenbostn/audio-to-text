@@ -63,14 +63,16 @@ If a task requires changing any contract:
 
 **Contract:**
 - **API Client:** groq Python library
+- **Model:** whisper-large-v3
 - **Authentication:** `GROQ_API_KEY` from .env file
-- **Input:** Temporary .wav file path
+- **Input:** Temporary .wav file path, language code (default: "tr" for Turkish)
 - **Output:** Transcribed text (string)
+- **Retry Logic:** 3 attempts with exponential backoff for network errors
 
 **Error Handling:**
 - API failure: Display error to user, do not inject text
 - Invalid API key: Prompt user to configure in settings
-- Network error: Retry or notify user
+- Network error: Retry up to 3 times with exponential backoff
 
 ---
 
@@ -143,3 +145,9 @@ If a task requires changing any contract:
   - Previous behavior: Undefined
   - New behavior: Defined 7 interface contracts (HOT-001, REC-001, TRX-001, INJ-001, UI-001, CFG-001, TRAY-001)
   - Compatibility notes: N/A (initial definition)
+
+- [2026-01-12] TRX-001: Turkish Language Support
+  - Change type: Response shape / API parameter
+  - Previous behavior: Language not specified, default Whisper auto-detection
+  - New behavior: Explicit `language="tr"` parameter passed to Groq API for improved Turkish transcription accuracy
+  - Compatibility notes: Backward-compatible (parameter defaults to "tr")

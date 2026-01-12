@@ -58,6 +58,12 @@
     - Accent color: #FF6B35 (orange)
   - **Impact:** All UI components styling
 
+- [2026-01-12] Turkish Language Parameter for Whisper API
+  - **Decision:** Explicitly pass `language="tr"` parameter to Groq Whisper API
+  - **Rationale:** User feedback indicated poor transcription accuracy; explicit language parameter improves Whisper model performance for Turkish
+  - **Implementation:** Added `language: str = "tr"` parameter to `transcribe()` and `_transcribe_once()` methods
+  - **Impact:** transcriber.py module, improved Turkish transcription accuracy
+
 ---
 
 # Technical Specification

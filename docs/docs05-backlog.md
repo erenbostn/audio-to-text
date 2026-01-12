@@ -55,48 +55,53 @@ Setup the directory structure and Python environment as defined in `project_stru
 
 ### Phase 2: Core - Audio Recording
 
-**TASK-002 | Audio Recorder Module | Priority: P0 | Status: Todo**
+**TASK-002 | Audio Recorder Module | Priority: P0 | Status: Done**
 
 Implement `src/core/recorder.py` for audio capture and .wav file generation.
 
 **Acceptance Criteria:**
-- [ ] Recorder class with `start_recording()` and `stop_recording()` methods
-- [ ] Uses sounddevice and numpy for audio capture
-- [ ] Saves to temporary .wav file with unique identifier
-- [ ] Runs in separate non-blocking thread
-- [ ] Handles recording interruption gracefully
-- [ ] Returns file path on stop
+- [x] Recorder class with `start_recording()` and `stop_recording()` methods
+- [x] Uses sounddevice and numpy for audio capture
+- [x] Saves to temporary .wav file with unique identifier
+- [x] Runs in separate non-blocking thread
+- [x] Handles recording interruption gracefully
+- [x] Returns file path on stop
+- [x] Temp files saved to project_root/temp/ directory
+- [x] cleanup_temp_files() method for disk management
 
 ---
 
 ### Phase 3: Core - Transcription
 
-**TASK-003 | Groq Transcriber Module | Priority: P0 | Status: Todo**
+**TASK-003 | Groq Transcriber Module | Priority: P0 | Status: Done**
 
 Implement `src/core/transcriber.py` for speech-to-text conversion via Groq API.
 
 **Acceptance Criteria:**
-- [ ] Transcriber class with `transcribe(audio_file_path)` method
-- [ ] Loads GROQ_API_KEY from .env via config.py
-- [ ] Sends audio file to Groq API
-- [ ] Returns transcribed text as string
-- [ ] Handles API errors (invalid key, network failure)
-- [ ] Returns None or raises exception on failure
+- [x] Transcriber class with `transcribe(audio_file_path)` method
+- [x] Loads GROQ_API_KEY from .env via config.py
+- [x] Sends audio file to Groq API
+- [x] Returns transcribed text as string
+- [x] Handles API errors (invalid key, network failure)
+- [x] Returns None or raises exception on failure
+- [x] Turkish language support via `language="tr"` parameter
 
 ---
 
 ### Phase 4: Core - Input Simulation
 
-**TASK-004 | Text Injection Module | Priority: P1 | Status: Todo**
+**TASK-004 | Text Injection Module | Priority: P1 | Status: Done**
 
 Implement `src/core/input_simulator.py` for keyboard text injection.
 
 **Acceptance Criteria:**
-- [ ] Injector class with `inject_text(text)` method
-- [ ] Uses pyautogui or keyboard library
-- [ ] Supports Unicode characters (ş, ı, ğ, ö, ç, ü)
-- [ ] Types at natural speed (configurable delay)
-- [ ] Respects current cursor position
+- [x] Injector class with `inject_text(text)` method
+- [x] Uses pyautogui or keyboard library
+- [x] Supports Unicode characters (ş, ı, ğ, ö, ç, ü)
+- [x] Types at natural speed (configurable delay)
+- [x] Respects current cursor position
+- [x] Clipboard-based injection (pyperclip) for full Unicode support
+- [x] Clipboard backup/restore to preserve user's clipboard
 
 ---
 
@@ -140,42 +145,42 @@ Implement `src/ui/settings_window.py` per html.md design and CFG-001 contract.
 
 ### Phase 7: UI - System Tray
 
-**TASK-007 | System Tray Integration | Priority: P1 | Status: Todo**
+**TASK-007 | System Tray Integration | Priority: P1 | Status: Done**
 
 Implement `src/ui/tray.py` for background application management per TRAY-001 contract.
 
 **Acceptance Criteria:**
-- [ ] Uses pystray with Pillow for icon generation
-- [ ] Tray icon menu items:
+- [x] Uses pystray with Pillow for icon generation
+- [x] Tray icon menu items:
   - "Restore" / "Show Settings"
   - "Quit"
-- [ ] "Restore" opens settings window
-- [ ] "Quit" cleanly exits application
-- [ ] Minimizes to tray (don't close on X)
-- [ ] Hotkey listener remains active when in tray
+- [x] "Restore" opens settings window
+- [x] "Quit" cleanly exits application
+- [x] Minimizes to tray (don't close on X)
+- [x] Hotkey listener remains active when in tray
 
 ---
 
 ### Phase 8: Main Entry Point
 
-**TASK-008 | Main Application Bootstrap | Priority: P0 | Status: Todo**
+**TASK-008 | Main Application Bootstrap | Priority: P0 | Status: Done**
 
 Implement `src/main.py` and `src/config.py` for application initialization.
 
 **config.py Acceptance Criteria:**
-- [ ] Loads GROQ_API_KEY from .env using python-dotenv
-- [ ] Provides `get_api_key()` function
-- [ ] Provides `save_api_key(key)` function
-- [ ] Handles missing .env gracefully
+- [x] Loads GROQ_API_KEY from .env using python-dotenv
+- [x] Provides `get_api_key()` function
+- [x] Provides `save_api_key(key)` function
+- [x] Handles missing .env gracefully
 
 **main.py Acceptance Criteria:**
-- [ ] Initializes customtkinter (dark mode, dark-blue theme)
-- [ ] Loads configuration via config.py
-- [ ] Creates system tray icon
-- [ ] Starts global hotkey listener (daemon thread)
-- [ ] Creates overlay window (hidden initially)
-- [ ] Connects hotkey → recorder → transcriber → injector flow
-- [ ] Handles application shutdown (tray quit)
+- [x] Initializes customtkinter (dark mode, dark-blue theme)
+- [x] Loads configuration via config.py
+- [x] Creates system tray icon
+- [x] Starts global hotkey listener (daemon thread)
+- [x] Creates overlay window (hidden initially)
+- [x] Connects hotkey → recorder → transcriber → injector flow
+- [x] Handles application shutdown (tray quit)
 
 ---
 
@@ -193,15 +198,15 @@ Implement `src/utils/audio_utils.py` for temporary file management.
 
 ---
 
-**TASK-010 | Sound Feedback Utilities | Priority: P2 | Status: Todo**
+**TASK-010 | Sound Feedback Utilities | Priority: P2 | Status: Done**
 
 Implement `src/utils/sound_feedback.py` for beep sounds per NFR-008.
 
 **Acceptance Criteria:**
-- [ ] `play_start_beep()` function (1000Hz, 200ms)
-- [ ] `play_stop_beep()` function (700Hz, 200ms)
-- [ ] Uses winsound (Windows-specific)
-- [ ] Respects user preference setting (enable/disable)
+- [x] `play_start_beep()` function (1000Hz, 200ms)
+- [x] `play_stop_beep()` function (700Hz, 200ms)
+- [x] Uses winsound (Windows-specific)
+- [x] Respects user preference setting (enable/disable)
 
 ---
 

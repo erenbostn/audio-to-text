@@ -31,3 +31,11 @@ Pure refactors with no behavior change are NOT notable.
 - Append-only. Do not rewrite or remove past entries.
 - Keep entries concise and user-focused.
 - If unsure whether a change is notable, do NOT add an entry.
+
+---
+
+## [2026-01-12]
+
+**Summary:** Improved Turkish transcription accuracy by explicitly passing language parameter to Groq Whisper API.
+
+**Notes:** Turkish language code (`tr`) is now sent with each transcription request, improving accuracy for Turkish speech input. This change is backward-compatible and applies automatically to all transcriptions.
