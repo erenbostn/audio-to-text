@@ -46,6 +46,11 @@ class SettingsWindow(ctk.CTk):
         self._on_close_callback = on_close  # Callback when window is closed
         self._app = app  # Reference to GroqWhisperApp for recording control
 
+        # History tracking
+        self._history_checkboxes: dict[str, ctk.CTkCheckBox] = {}
+        self._history_items: dict[str, dict] = {}  # id -> {checkbox, labels}
+        self._selected_file: str | None = None  # For file upload
+
         self._setup_window()
         self._create_ui()
         self._load_settings()
@@ -56,7 +61,7 @@ class SettingsWindow(ctk.CTk):
     def _setup_window(self):
         """Configure window - CSS body styling."""
         self.title("GroqWhisper Settings")
-        self.geometry("450x480")
+        self.geometry("450x750")  # Increased for history + file upload
 
         # Deep background --bg-color: #0c0c0c
         self.configure(fg_color=self.BG_COLOR)
@@ -66,7 +71,7 @@ class SettingsWindow(ctk.CTk):
 
     def _center_window(self):
         self.update_idletasks()
-        width, height = 450, 480
+        width, height = 450, 750  # Increased for history + file upload
         x = (self.winfo_screenwidth() - width) // 2
         y = (self.winfo_screenheight() - height) // 2
         self.geometry(f"{width}x{height}+{x}+{y}")
@@ -90,11 +95,24 @@ class SettingsWindow(ctk.CTk):
         # Window header - .window-header { padding: 16px 24px }
         self._create_header(glass_frame)
 
-        # Window body - .window-body { padding: 24px; gap: 20px }
-        body_frame = ctk.CTkFrame(glass_frame, fg_color="transparent")
+        # Window body - make scrollable to fit all content
+        # CTkScrollableFrame to handle content overflow
+        body_frame = ctk.CTkScrollableFrame(
+            glass_frame,
+            fg_color="transparent",
+            scrollbar_button_color=self.ACCENT_COLOR,
+            scrollbar_button_hover_color=self.ACCENT_GLOW,
+            label_text=""  # No label
+        )
         body_frame.pack(fill="both", expand=True, padx=24, pady=(0, 24))
 
-        # Form groups with gap: 20px
+        # NEW: Recording History section (TOP - first thing user sees)
+        self._create_history_view(body_frame)
+
+        # NEW: File Upload section
+        self._create_file_upload(body_frame)
+
+        # Original sections (below)
         self._create_api_key_field(body_frame)
         self._create_mic_dropdown(body_frame)
         self._create_hotkey_field(body_frame)
@@ -270,7 +288,7 @@ class SettingsWindow(ctk.CTk):
             text_color="#666666"
         )
         self._hotkey_entry.pack(side="left", fill="x", expand=True)
-        self._hotkey_entry.insert(0, "Ctrl + Alt + Space")
+        self._hotkey_entry.insert(0, "Ctrl + Alt + K")
         self._hotkey_entry.configure(state="disabled")
 
         icon = ctk.CTkLabel(
@@ -350,6 +368,131 @@ class SettingsWindow(ctk.CTk):
             switch_height=24
         )
         self._overlay_switch.pack(side="right")
+
+    def _create_history_view(self, parent):
+        """Create recording history section with checkboxes."""
+        form_frame = ctk.CTkFrame(parent, fg_color="transparent")
+        form_frame.pack(fill="x", pady=(0, 20))
+
+        # Section label with count
+        self._history_label = ctk.CTkLabel(
+            form_frame,
+            text="Recording History (0)",
+            font=("Inter", 12, "normal"),
+            text_color=self.TEXT_SECONDARY,
+            anchor="w"
+        )
+        self._history_label.pack(fill="x", pady=(0, 8))
+
+        # Frame for recordings list (not scrollable - main body is scrollable)
+        self._history_scroll = ctk.CTkFrame(
+            form_frame,
+            fg_color="transparent"
+        )
+        self._history_scroll.pack(fill="x", pady=(0, 8))
+
+        # Empty state message
+        self._history_empty_label = ctk.CTkLabel(
+            self._history_scroll,
+            text="No recordings yet.\nRecord some audio to see them here.",
+            font=("Inter", 11),
+            text_color=self.TEXT_SECONDARY
+        )
+        self._history_empty_label.pack(pady=10)
+
+        # Action buttons frame
+        btn_frame = ctk.CTkFrame(form_frame, fg_color="transparent")
+        btn_frame.pack(fill="x")
+
+        self._transcribe_selected_btn = ctk.CTkButton(
+            btn_frame,
+            text="Transcribe Selected",
+            font=("Inter", 12, "bold"),
+            height=38,
+            corner_radius=8,
+            fg_color=self.ACCENT_COLOR,
+            hover_color=self.ACCENT_GLOW,
+            text_color=self.TEXT_PRIMARY,
+            command=self._transcribe_selected,
+            state="disabled"
+        )
+        self._transcribe_selected_btn.pack(side="left", fill="x", expand=True, padx=(0, 4))
+
+        self._delete_selected_btn = ctk.CTkButton(
+            btn_frame,
+            text="Delete Selected",
+            font=("Inter", 12),
+            height=38,
+            corner_radius=8,
+            fg_color=("#333333", "#404040"),
+            hover_color=("#444444", "#505050"),
+            text_color=self.TEXT_PRIMARY,
+            command=self._delete_selected,
+            state="disabled"
+        )
+        self._delete_selected_btn.pack(side="left", fill="x", expand=True, padx=(4, 0))
+
+    def _create_file_upload(self, parent):
+        """Create file upload section for transcribing external audio files."""
+        form_frame = ctk.CTkFrame(parent, fg_color="transparent")
+        form_frame.pack(fill="x", pady=(0, 20))
+
+        # Section label
+        label = ctk.CTkLabel(
+            form_frame,
+            text="Transcribe from File",
+            font=("Inter", 12, "normal"),
+            text_color=self.TEXT_SECONDARY,
+            anchor="w"
+        )
+        label.pack(fill="x", pady=(0, 8))
+
+        # File entry + browse button frame
+        entry_frame = ctk.CTkFrame(form_frame, fg_color="transparent")
+        entry_frame.pack(fill="x")
+
+        self._file_entry = ctk.CTkEntry(
+            entry_frame,
+            placeholder_text="Select audio file...",
+            font=("Inter", 14, "normal"),
+            height=45,
+            corner_radius=8,
+            border_color=self.INPUT_BORDER,
+            border_width=1,
+            fg_color=self.INPUT_BG,
+            placeholder_text_color=self.TEXT_SECONDARY,
+            text_color=self.TEXT_PRIMARY
+        )
+        self._file_entry.pack(side="left", fill="x", expand=True)
+
+        self._browse_btn = ctk.CTkButton(
+            entry_frame,
+            text="Browse",
+            width=80,
+            height=45,
+            font=("Inter", 12),
+            corner_radius=8,
+            fg_color=("#333333", "#404040"),
+            hover_color=("#444444", "#505050"),
+            text_color=self.TEXT_PRIMARY,
+            command=self._browse_file
+        )
+        self._browse_btn.pack(side="left", padx=(8, 0))
+
+        # Transcribe button
+        self._transcribe_file_btn = ctk.CTkButton(
+            form_frame,
+            text="Transcribe File",
+            font=("Inter", 13, "bold"),
+            height=45,
+            corner_radius=8,
+            fg_color=self.ACCENT_COLOR,
+            hover_color=self.ACCENT_GLOW,
+            text_color=self.TEXT_PRIMARY,
+            command=self._transcribe_file,
+            state="disabled"
+        )
+        self._transcribe_file_btn.pack(fill="x", pady=(8, 0))
 
     def _create_recording_button(self, parent):
         """Create prominent recording button."""
@@ -439,7 +582,9 @@ class SettingsWindow(ctk.CTk):
 
         try:
             self._config.save_api_key(api_key)
-            self._save_toggle_settings(play_beep, show_overlay)
+            # Use new config methods that also update os.environ
+            self._config.save_beep_setting(play_beep)
+            self._config.save_overlay_setting(show_overlay)
             self._show_save_success()
 
             if self._on_save_callback:
@@ -450,37 +595,6 @@ class SettingsWindow(ctk.CTk):
                 "Save Error",
                 f"Failed to save configuration:\n{str(e)}"
             )
-
-    def _save_toggle_settings(self, play_beep: bool, show_overlay: bool):
-        import os
-        from dotenv import load_dotenv
-
-        env_path = self._config.env_path
-        load_dotenv(env_path)
-
-        content = ""
-        if env_path.exists():
-            with open(env_path, "r", encoding="utf-8") as f:
-                content = f.read()
-
-        lines = content.split("\n")
-
-        for i, line in enumerate(lines):
-            if line.startswith("PLAY_BEEP_SOUND="):
-                lines[i] = f"PLAY_BEEP_SOUND={'true' if play_beep else 'false'}"
-                break
-        else:
-            lines.append(f"PLAY_BEEP_SOUND={'true' if play_beep else 'false'}")
-
-        for i, line in enumerate(lines):
-            if line.startswith("SHOW_OVERLAY="):
-                lines[i] = f"SHOW_OVERLAY={'true' if show_overlay else 'false'}"
-                break
-        else:
-            lines.append(f"SHOW_OVERLAY={'true' if show_overlay else 'false'}")
-
-        with open(env_path, "w", encoding="utf-8") as f:
-            f.write("\n".join(lines))
 
     def _show_save_success(self):
         original_text = self._save_button.cget("text")
@@ -521,6 +635,219 @@ class SettingsWindow(ctk.CTk):
                     text="🎙 START RECORDING",
                     fg_color=self.ACCENT_COLOR
                 )
+
+    def _refresh_history(self) -> None:
+        """Refresh the recording history list from app's history manager."""
+        if not self._app or not hasattr(self._app, 'history'):
+            return
+
+        # Clear existing items
+        for widget in self._history_scroll.winfo_children():
+            widget.destroy()
+        self._history_checkboxes.clear()
+        self._history_items.clear()
+
+        recordings = self._app.history.get_recordings()
+        count = len(recordings)
+
+        # Update label with count
+        self._history_label.configure(text=f"Recording History ({count})")
+
+        if count == 0:
+            # Show empty state
+            self._history_empty_label = ctk.CTkLabel(
+                self._history_scroll,
+                text="No recordings yet.\nRecord some audio to see them here.",
+                font=("Inter", 11),
+                text_color=self.TEXT_SECONDARY
+            )
+            self._history_empty_label.pack(pady=10)
+            # Disable action buttons
+            self._transcribe_selected_btn.configure(state="disabled")
+            self._delete_selected_btn.configure(state="disabled")
+            return
+
+        # Hide empty state label if it exists
+        for widget in self._history_scroll.winfo_children():
+            if isinstance(widget, ctk.CTkLabel) and "No recordings" in widget.cget("text"):
+                widget.destroy()
+
+        # Create items for each recording
+        for recording in recordings:
+            self._create_history_item(recording)
+
+        # Enable action buttons
+        self._transcribe_selected_btn.configure(state="normal")
+        self._delete_selected_btn.configure(state="normal")
+
+    def _create_history_item(self, recording) -> None:
+        """Create a single history item with checkbox and details."""
+        from datetime import datetime
+        from pathlib import Path
+
+        # Item container
+        item_frame = ctk.CTkFrame(
+            self._history_scroll,
+            fg_color=self.INPUT_BG,
+            corner_radius=8,
+            height=60
+        )
+        item_frame.pack(fill="x", pady=(0, 8))
+
+        # Checkbox
+        checkbox = ctk.CTkCheckBox(
+            item_frame,
+            text="",
+            width=20,
+            corner_radius=4,
+            border_width=2,
+            fg_color=("#333333", "#404040"),
+            progress_color=self.ACCENT_COLOR,
+            button_color=self.TEXT_PRIMARY,
+            button_hover_color=self.TEXT_PRIMARY,
+            command=lambda: self._on_history_checkbox_changed()
+        )
+        checkbox.pack(side="left", padx=(8, 8), pady=8)
+        self._history_checkboxes[recording.id] = checkbox
+
+        # Info container
+        info_frame = ctk.CTkFrame(item_frame, fg_color="transparent")
+        info_frame.pack(side="left", fill="both", expand=True, padx=(0, 8), pady=8)
+
+        # Filename with status
+        status_text = "Done" if recording.transcribed else "Ready"
+        status_color = "#27c93f" if recording.transcribed else "#888888"
+
+        filename_label = ctk.CTkLabel(
+            info_frame,
+            text=f"{recording.filename} [{status_text}]",
+            font=("Inter", 12, "normal"),
+            text_color=self.TEXT_PRIMARY,
+            anchor="w"
+        )
+        filename_label.pack(fill="x")
+
+        # Timestamp and size
+        time_str = recording.created_at.strftime("%H:%M:%S")
+        size_kb = int(recording.file_size_kb)
+        details_label = ctk.CTkLabel(
+            info_frame,
+            text=f"{time_str} • {size_kb}KB",
+            font=("Inter", 10),
+            text_color=self.TEXT_SECONDARY,
+            anchor="w"
+        )
+        details_label.pack(fill="x")
+
+        # Transcript preview (if transcribed)
+        if recording.transcribed and recording.transcript:
+            preview_label = ctk.CTkLabel(
+                info_frame,
+                text=f'"{recording.transcript_preview}"',
+                font=("Inter", 10, "italic"),
+                text_color=self.ACCENT_COLOR,
+                anchor="w"
+            )
+            preview_label.pack(fill="x", pady=(2, 0))
+
+        # Store references
+        self._history_items[recording.id] = {
+            "checkbox": checkbox,
+            "frame": item_frame,
+            "filename": filename_label,
+            "details": details_label
+        }
+
+    def _on_history_checkbox_changed(self) -> None:
+        """Handle checkbox state change - update button states."""
+        any_checked = any(cb.get() for cb in self._history_checkboxes.values())
+        # Could enable/disable based on selection, but for now buttons work regardless
+
+    def _transcribe_selected(self) -> None:
+        """Transcribe selected recordings."""
+        if not self._app or not hasattr(self._app, 'history'):
+            return
+
+        # Get selected recordings
+        selected_state = {
+            rid: cb.get() for rid, cb in self._history_checkboxes.items()
+        }
+        selected = self._app.history.get_selected_recordings(selected_state)
+
+        if not selected:
+            return
+
+        # Transcribe each selected recording
+        for recording in selected:
+            if not recording.transcribed:
+                try:
+                    from pathlib import Path
+                    if Path(recording.filepath).exists():
+                        text = self._app.transcriber.transcribe(recording.filepath, language="tr")
+                        if text:
+                            self._app.history.update_transcript(recording.id, text)
+                            self._app.injector.inject_text(text)
+                except Exception as e:
+                    print(f"Error transcribing {recording.filename}: {e}")
+
+        # Refresh the history list to show transcriptions
+        self._refresh_history()
+
+    def _delete_selected(self) -> None:
+        """Delete selected recordings from history."""
+        if not self._app or not hasattr(self._app, 'history'):
+            return
+
+        # Get selected recording IDs
+        selected_state = {
+            rid: cb.get() for rid, cb in self._history_checkboxes.items()
+        }
+        selected_ids = self._app.history.get_selected_ids(selected_state)
+
+        # Delete each selected recording
+        for rid in selected_ids:
+            self._app.history.delete_recording(rid)
+
+        # Refresh the history list
+        self._refresh_history()
+
+    def _browse_file(self) -> None:
+        """Open file dialog to select audio file."""
+        from tkinter import filedialog
+
+        file_path = filedialog.askopenfilename(
+            title="Select Audio File",
+            filetypes=[
+                ("WAV files", "*.wav"),
+                ("Audio files", "*.wav;*.mp3;*.ogg;*.flac"),
+                ("All files", "*.*")
+            ],
+            initialdir=str(Path.home())
+        )
+
+        if file_path:
+            self._selected_file = file_path
+            self._file_entry.delete(0, "end")
+            self._file_entry.insert(0, file_path)
+            self._transcribe_file_btn.configure(state="normal")
+
+    def _transcribe_file(self) -> None:
+        """Transcribe the selected file."""
+        if not self._selected_file:
+            return
+
+        if not self._app:
+            return
+
+        try:
+            text = self._app.transcriber.transcribe(self._selected_file, language="tr")
+            if text:
+                self._app.injector.inject_text(text)
+                print(f"Transcribed file: {self._selected_file}")
+            else:
+                print("Transcription returned empty result.")
+        except Exception as e:
+            print(f"Error transcribing file: {e}")
 
 
 def test_settings_window():

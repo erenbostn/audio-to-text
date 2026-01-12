@@ -78,3 +78,59 @@ class Config:
     def play_beep(self) -> bool:
         """Get beep sound preference."""
         return os.getenv("PLAY_BEEP_SOUND", "true").lower() == "true"
+
+    def reload_env(self) -> None:
+        """Reload environment variables from .env file."""
+        load_dotenv(self.env_path, override=True)
+
+    def save_beep_setting(self, enabled: bool) -> None:
+        """
+        Save beep sound setting to .env and update os.environ.
+
+        Args:
+            enabled: Whether beep sound is enabled.
+        """
+        value = "true" if enabled else "false"
+        self._save_env_value("PLAY_BEEP_SOUND", value)
+        os.environ["PLAY_BEEP_SOUND"] = value
+
+    def save_overlay_setting(self, enabled: bool) -> None:
+        """
+        Save overlay setting to .env and update os.environ.
+
+        Args:
+            enabled: Whether overlay is enabled.
+        """
+        value = "true" if enabled else "false"
+        self._save_env_value("SHOW_OVERLAY", value)
+        os.environ["SHOW_OVERLAY"] = value
+
+    def _save_env_value(self, key: str, value: str) -> None:
+        """
+        Save a key-value pair to .env file.
+
+        Args:
+            key: Environment variable name.
+            value: Value to set.
+        """
+        # Read existing .env content
+        content = ""
+        if self.env_path.exists():
+            with open(self.env_path, "r", encoding="utf-8") as f:
+                content = f.read()
+
+        # Update or add the key
+        lines = content.split("\n")
+        updated = False
+        for i, line in enumerate(lines):
+            if line.startswith(f"{key}="):
+                lines[i] = f"{key}={value}"
+                updated = True
+                break
+
+        if not updated:
+            lines.append(f"{key}={value}")
+
+        # Write back to .env
+        with open(self.env_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(lines))

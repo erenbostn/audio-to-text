@@ -1,0 +1,66 @@
+"""
+Recording data model for GroqWhisper Desktop.
+Represents a single audio recording with its transcription state.
+"""
+
+from dataclasses import dataclass, field
+from datetime import datetime
+from pathlib import Path
+
+
+@dataclass
+class Recording:
+    """
+    Represents a single audio recording.
+
+    Attributes:
+        id: Unique identifier (timestamp as string).
+        filepath: Path to the audio file.
+        created_at: When the recording was created.
+        transcribed: Whether transcription is complete.
+        transcript: Transcribed text (None if not transcribed).
+    """
+    id: str
+    filepath: str
+    created_at: datetime
+    transcribed: bool = False
+    transcript: str | None = None
+
+    @property
+    def filename(self) -> str:
+        """Get the filename from filepath."""
+        return Path(self.filepath).name
+
+    @property
+    def file_size(self) -> int:
+        """Get file size in bytes."""
+        return Path(self.filepath).stat().st_size if Path(self.filepath).exists() else 0
+
+    @property
+    def file_size_mb(self) -> float:
+        """Get file size in megabytes."""
+        return self.file_size / (1024 * 1024)
+
+    @property
+    def file_size_kb(self) -> float:
+        """Get file size in kilobytes."""
+        return self.file_size / 1024
+
+    @property
+    def transcript_preview(self, max_length: int = 50) -> str:
+        """
+        Get a preview of the transcript text.
+
+        Args:
+            max_length: Maximum length of preview.
+
+        Returns:
+            Truncated transcript with ellipsis if needed.
+        """
+        if not self.transcript:
+            return ""
+
+        if len(self.transcript) <= max_length:
+            return self.transcript
+
+        return self.transcript[:max_length] + "..."

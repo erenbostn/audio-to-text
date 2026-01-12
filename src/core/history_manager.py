@@ -1,0 +1,137 @@
+"""
+History Manager for GroqWhisper Desktop.
+Manages in-memory recording history during app session.
+"""
+
+import time
+import sys
+from datetime import datetime
+from pathlib import Path
+from typing import Callable
+
+# Add parent directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from models.recording import Recording
+
+
+class HistoryManager:
+    """
+    Manages recording history for the current session.
+
+    Recordings are stored in memory during the session.
+    Files are cleaned up on app shutdown.
+    """
+
+    def __init__(self):
+        """Initialize empty history."""
+        self._recordings: dict[str, Recording] = {}
+
+    def add_recording(self, filepath: str) -> str:
+        """
+        Add a recording to history.
+
+        Args:
+            filepath: Path to the audio file.
+
+        Returns:
+            The recording ID (timestamp).
+        """
+        recording_id = str(int(time.time() * 1000))
+        recording = Recording(
+            id=recording_id,
+            filepath=filepath,
+            created_at=datetime.now(),
+            transcribed=False,
+            transcript=None
+        )
+        self._recordings[recording_id] = recording
+        return recording_id
+
+    def get_recordings(self) -> list[Recording]:
+        """
+        Get all recordings, newest first.
+
+        Returns:
+            List of recordings sorted by creation time (newest first).
+        """
+        return sorted(
+            self._recordings.values(),
+            key=lambda r: r.created_at,
+            reverse=True
+        )
+
+    def get_recording(self, recording_id: str) -> Recording | None:
+        """
+        Get a specific recording by ID.
+
+        Args:
+            recording_id: The recording ID.
+
+        Returns:
+            The Recording object, or None if not found.
+        """
+        return self._recordings.get(recording_id)
+
+    def update_transcript(self, recording_id: str, text: str) -> None:
+        """
+        Update the transcript for a recording.
+
+        Args:
+            recording_id: The recording ID.
+            text: The transcribed text.
+        """
+        if recording_id in self._recordings:
+            self._recordings[recording_id].transcribed = True
+            self._recordings[recording_id].transcript = text
+
+    def delete_recording(self, recording_id: str) -> bool:
+        """
+        Delete a recording from history.
+
+        Note: This only removes from history list.
+        The actual file is deleted at app shutdown.
+
+        Args:
+            recording_id: The recording ID.
+
+        Returns:
+            True if deleted, False if not found.
+        """
+        if recording_id in self._recordings:
+            del self._recordings[recording_id]
+            return True
+        return False
+
+    def clear_all(self) -> None:
+        """Clear all recordings from history."""
+        self._recordings.clear()
+
+    def get_count(self) -> int:
+        """Get the number of recordings in history."""
+        return len(self._recordings)
+
+    def get_selected_ids(self, selected_state: dict[str, bool]) -> list[str]:
+        """
+        Get list of selected recording IDs.
+
+        Args:
+            selected_state: Dictionary mapping recording_id -> selected (bool).
+
+        Returns:
+            List of selected recording IDs.
+        """
+        return [rid for rid, selected in selected_state.items() if selected]
+
+    def get_selected_recordings(self, selected_state: dict[str, bool]) -> list[Recording]:
+        """
+        Get list of selected Recording objects.
+
+        Args:
+            selected_state: Dictionary mapping recording_id -> selected (bool).
+
+        Returns:
+            List of selected Recording objects.
+        """
+        selected_ids = self.get_selected_ids(selected_state)
+        return [self._recordings[rid] for rid in selected_ids if rid in self._recordings]

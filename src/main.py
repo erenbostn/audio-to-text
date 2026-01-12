@@ -17,6 +17,7 @@ from config import Config
 from core.recorder import AudioRecorder
 from core.transcriber import GroqTranscriber
 from core.input_simulator import TextInjector
+from core.history_manager import HistoryManager
 from ui.overlay import RecordingOverlay
 from ui.settings_window import SettingsWindow
 from ui.tray import SystemTray
@@ -73,6 +74,9 @@ class GroqWhisperApp:
         )
         self.transcriber = GroqTranscriber()
         self.injector = TextInjector()
+
+        # History manager
+        self.history = HistoryManager()
 
         # Utilities
         self.sound = SoundFeedback(self.config.play_beep)
@@ -142,7 +146,7 @@ class GroqWhisperApp:
             self.root.after(0, self._settings_window._update_recording_button)
 
     def _stop_recording(self) -> None:
-        """Stop recording and transcribe."""
+        """Stop recording and add to history (no auto-transcription)."""
         # Stop recording and get audio file
         audio_file = self.recorder.stop_recording()
 
@@ -153,24 +157,21 @@ class GroqWhisperApp:
 
         self._is_recording = False
         self.overlay.hide()
-        self.tray.update_tooltip("Processing...")
+
+        # Play stop beep
+        self.sound.play_stop_beep()
+
+        # Add to history instead of auto-transcribing
+        recording_id = self.history.add_recording(audio_file)
+        print(f"Recording saved to history: {recording_id}")
 
         # Update settings button if visible
         if self._settings_window:
             self.root.after(0, self._settings_window._update_recording_button)
+            # Refresh history UI to show new recording
+            self.root.after(0, self._settings_window._refresh_history)
 
-        # Transcribe
-        try:
-            text = self.transcriber.transcribe(audio_file, language="tr")
-            if text:
-                self.sound.play_stop_beep()
-                self.injector.inject_text(text)
-            else:
-                print("Transcription returned empty result.")
-        except Exception as e:
-            print(f"Error during transcription: {e}")
-        finally:
-            self.tray.update_tooltip("Ready")
+        self.tray.update_tooltip("Ready")
 
     def _reset_state(self) -> None:
         """Reset recording state after error."""
