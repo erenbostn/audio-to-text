@@ -132,6 +132,30 @@
     - Bug 2 Fixed: Removed injector.inject_text() call (was injecting to cursor position, causing file path entry pollution)
     - User now uses "Copy to Clipboard" button to get transcription text
 
+- [2026-01-12] Full Transcription Display in History
+  - What changed: Added full transcription text display in Recording History with Copy and Download buttons
+  - Affected area: src/ui/settings_window.py
+  - Notes:
+    - Added dedicated transcript display area below history list (CTkTextbox with 120px height)
+    - Added "Copy" button to copy full text to clipboard with "✓ Copied!" feedback
+    - Added "Download .txt" button to save transcription as UTF-8 .txt file with "✓ Saved!" feedback
+    - Display shown when transcribed item is selected, hidden when selection is cleared
+    - Multiple selections show most recent (newest-first sorting)
+    - Modified _on_history_checkbox_changed() to show/hide transcript based on selection
+    - Added 5 new methods: _show_history_transcript(), _hide_history_transcript(), _copy_history_transcript(), _download_history_transcript(), _get_selected_transcribed_recordings()
+    - Window size unchanged (scrollable body accommodates new content)
+
+- [2026-01-12] File Upload Download Button
+  - What changed: Added Download button to "Transcribe from File" transcription result area
+  - Affected area: src/ui/settings_window.py
+  - Notes:
+    - Added "Download .txt" button next to "Copy to Clipboard" button
+    - Filename format: `{source_file}_transcript.txt` (e.g., speech_transcript.txt)
+    - Button shows "✓ Saved!" feedback after successful download
+    - Fixed Copy button layout from side="right" to side="left" for consistency
+    - Both buttons now on left side, matching history section layout
+    - Keeps current behavior of showing only most recent transcription
+
 ---
 
 ## KNOWN ISSUES / UNKNOWNS (AI-maintained)

@@ -454,6 +454,67 @@ class SettingsWindow(ctk.CTk):
         )
         self._history_scroll.pack(fill="x", pady=(0, 8))
 
+        # Transcript display section (hidden initially)
+        self._history_transcript_label = ctk.CTkLabel(
+            form_frame,
+            text="Transcription:",
+            font=("Inter", 12, "normal"),
+            text_color=self.TEXT_SECONDARY,
+            anchor="w"
+        )
+        self._history_transcript_label.pack(fill="x", pady=(8, 4))
+        self._history_transcript_label.pack_forget()  # Hidden initially
+
+        # Full text textbox
+        self._history_transcript_text = ctk.CTkTextbox(
+            form_frame,
+            height=120,
+            font=("Inter", 13),
+            corner_radius=8,
+            border_color=self.INPUT_BORDER,
+            border_width=1,
+            fg_color=self.INPUT_BG,
+            text_color=self.TEXT_PRIMARY,
+            wrap="word"
+        )
+        self._history_transcript_text.pack(fill="x")
+        self._history_transcript_text.pack_forget()  # Hidden initially
+
+        # Action buttons frame for copy/download
+        self._history_transcript_btn_frame = ctk.CTkFrame(form_frame, fg_color="transparent")
+        self._history_transcript_btn_frame.pack(fill="x", pady=(8, 0))
+        self._history_transcript_btn_frame.pack_forget()  # Hidden initially
+
+        # Copy button
+        self._copy_history_transcript_btn = ctk.CTkButton(
+            self._history_transcript_btn_frame,
+            text="Copy",
+            font=("Inter", 11),
+            height=36,
+            corner_radius=8,
+            fg_color=("#333333", "#404040"),
+            hover_color=("#444444", "#505050"),
+            text_color=self.TEXT_PRIMARY,
+            command=self._copy_history_transcript,
+            width=100
+        )
+        self._copy_history_transcript_btn.pack(side="left", padx=(0, 4))
+
+        # Download button
+        self._download_history_transcript_btn = ctk.CTkButton(
+            self._history_transcript_btn_frame,
+            text="Download .txt",
+            font=("Inter", 11),
+            height=36,
+            corner_radius=8,
+            fg_color=("#333333", "#404040"),
+            hover_color=("#444444", "#505050"),
+            text_color=self.TEXT_PRIMARY,
+            command=self._download_history_transcript,
+            width=120
+        )
+        self._download_history_transcript_btn.pack(side="left")
+
         # Empty state message
         self._history_empty_label = ctk.CTkLabel(
             self._history_scroll,
@@ -597,9 +658,25 @@ class SettingsWindow(ctk.CTk):
             fg_color=("#333333", "#404040"),
             hover_color=("#444444", "#505050"),
             text_color=self.TEXT_PRIMARY,
-            command=self._copy_transcript_result
+            command=self._copy_transcript_result,
+            width=140
         )
-        self._copy_transcript_btn.pack(side="right")
+        self._copy_transcript_btn.pack(side="left", padx=(0, 4))
+
+        # Download button
+        self._download_file_transcript_btn = ctk.CTkButton(
+            self._copy_result_btn_frame,
+            text="Download .txt",
+            font=("Inter", 12),
+            height=38,
+            corner_radius=8,
+            fg_color=("#333333", "#404040"),
+            hover_color=("#444444", "#505050"),
+            text_color=self.TEXT_PRIMARY,
+            command=self._download_file_transcript,
+            width=140
+        )
+        self._download_file_transcript_btn.pack(side="left")
 
     def _create_recording_button(self, parent):
         """Create prominent recording button."""
@@ -805,6 +882,9 @@ class SettingsWindow(ctk.CTk):
         self._transcribe_selected_btn.configure(state="normal")
         self._delete_selected_btn.configure(state="normal")
 
+        # Clear transcript display when history refreshes
+        self._hide_history_transcript()
+
     def _create_history_item(self, recording) -> None:
         """Create a single history item with checkbox and details."""
         from datetime import datetime
@@ -883,9 +963,15 @@ class SettingsWindow(ctk.CTk):
         }
 
     def _on_history_checkbox_changed(self) -> None:
-        """Handle checkbox state change - update button states."""
-        any_checked = any(cb.get() for cb in self._history_checkboxes.values())
-        # Could enable/disable based on selection, but for now buttons work regardless
+        """Handle checkbox state change - show/hide transcription."""
+        transcribed_selected = self._get_selected_transcribed_recordings()
+
+        if transcribed_selected:
+            # Show most recently selected (first due to newest-first sorting)
+            self._show_history_transcript(transcribed_selected[0])
+        else:
+            # Hide transcript display
+            self._hide_history_transcript()
 
     def _transcribe_selected(self) -> None:
         """Transcribe selected recordings."""
@@ -938,6 +1024,9 @@ class SettingsWindow(ctk.CTk):
 
         # Refresh the history list
         self._refresh_history()
+
+        # Clear transcript display if visible
+        self._hide_history_transcript()
 
     def _browse_file(self) -> None:
         """Open file dialog to select audio file."""
@@ -993,6 +1082,43 @@ class SettingsWindow(ctk.CTk):
             original_text = self._copy_transcript_btn.cget("text")
             self._copy_transcript_btn.configure(text="✓ Copied!")
             self.after(1500, lambda: self._copy_transcript_btn.configure(text=original_text))
+
+    def _download_file_transcript(self) -> None:
+        """Download the file upload transcription as a .txt file."""
+        from tkinter import filedialog
+        from pathlib import Path
+
+        text = self._transcript_result_text.get("1.0", "end").strip()
+        if not text:
+            return
+
+        # Generate filename from selected file path
+        if self._selected_file:
+            from pathlib import Path as PathLib
+            base_name = PathLib(self._selected_file).stem
+            default_filename = f"{base_name}_transcript.txt"
+        else:
+            default_filename = "transcript.txt"
+
+        # Open save dialog
+        file_path = filedialog.asksaveasfilename(
+            title="Save Transcription",
+            defaultextension=".txt",
+            initialfile=default_filename,
+            filetypes=[("Text files", "*.txt"), ("All files", "*.*")],
+            initialdir=str(Path.home())
+        )
+
+        if file_path:
+            try:
+                Path(file_path).write_text(text, encoding="utf-8")
+                # Show success feedback
+                original_text = self._download_file_transcript_btn.cget("text")
+                self._download_file_transcript_btn.configure(text="✓ Saved!")
+                self.after(1500, lambda: self._download_file_transcript_btn.configure(text=original_text))
+            except Exception as e:
+                from tkinter import messagebox
+                messagebox.showerror("Save Error", f"Failed to save file:\n{str(e)}")
 
     def _transcribe_file(self) -> None:
         """Transcribe the selected file."""
@@ -1079,6 +1205,88 @@ class SettingsWindow(ctk.CTk):
         ))
 
         print(f"[ERROR] Transcription failed: {error_msg}")
+
+    # === History Transcript Display Methods ===
+
+    def _show_history_transcript(self, recording) -> None:
+        """Show full transcription for a selected recording."""
+        if not recording.transcript:
+            return
+
+        # Make widgets visible
+        self._history_transcript_label.pack(fill="x", pady=(8, 4))
+        self._history_transcript_text.pack(fill="x")
+        self._history_transcript_btn_frame.pack(fill="x", pady=(8, 0))
+
+        # Force update and clear/insert text
+        self._history_transcript_text.update()
+        self._history_transcript_text.delete("1.0", "end-1c")
+        self._history_transcript_text.insert("1.0", recording.transcript)
+        self._history_transcript_text.configure(text_color=self.TEXT_PRIMARY)
+
+    def _hide_history_transcript(self) -> None:
+        """Hide the history transcription display area."""
+        self._history_transcript_label.pack_forget()
+        self._history_transcript_text.pack_forget()
+        self._history_transcript_btn_frame.pack_forget()
+
+    def _copy_history_transcript(self) -> None:
+        """Copy the history transcription to clipboard."""
+        text = self._history_transcript_text.get("1.0", "end").strip()
+        if text:
+            pyperclip.copy(text)
+            original_text = self._copy_history_transcript_btn.cget("text")
+            self._copy_history_transcript_btn.configure(text="✓ Copied!")
+            self.after(1500, lambda: self._copy_history_transcript_btn.configure(text=original_text))
+
+    def _download_history_transcript(self) -> None:
+        """Download the transcription as a .txt file."""
+        from tkinter import filedialog
+        from pathlib import Path
+
+        text = self._history_transcript_text.get("1.0", "end").strip()
+        if not text:
+            return
+
+        # Get selected recording for filename
+        selected = self._get_selected_transcribed_recordings()
+        if not selected:
+            return
+
+        recording = selected[0]
+        default_filename = f"transcript_{recording.id}.txt"
+
+        # Open save dialog
+        file_path = filedialog.asksaveasfilename(
+            title="Save Transcription",
+            defaultextension=".txt",
+            initialfile=default_filename,
+            filetypes=[("Text files", "*.txt"), ("All files", "*.*")],
+            initialdir=str(Path.home())
+        )
+
+        if file_path:
+            try:
+                Path(file_path).write_text(text, encoding="utf-8")
+                original_text = self._download_history_transcript_btn.cget("text")
+                self._download_history_transcript_btn.configure(text="✓ Saved!")
+                self.after(1500, lambda: self._download_history_transcript_btn.configure(text=original_text))
+            except Exception as e:
+                from tkinter import messagebox
+                messagebox.showerror("Save Error", f"Failed to save file:\n{str(e)}")
+
+    def _get_selected_transcribed_recordings(self) -> list:
+        """Get list of selected recordings that have transcriptions."""
+        if not self._app or not hasattr(self._app, 'history'):
+            return []
+
+        selected_state = {
+            rid: cb.get() for rid, cb in self._history_checkboxes.items()
+        }
+        selected = self._app.history.get_selected_recordings(selected_state)
+
+        # Filter only transcribed recordings
+        return [r for r in selected if r.transcribed and r.transcript]
 
 
 def test_settings_window():

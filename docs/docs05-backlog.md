@@ -429,3 +429,41 @@ Fix duplicate text and unintended text injection in file upload transcription.
   - Fixed duplicate text in transcription results
   - Fixed transcribed text appearing in file path entry
   - Status = Done
+
+---
+
+**TASK-024 | Full Transcription Display in History | Priority: P0 | Status: Done**
+
+Add full transcription text display in Recording History with Copy and Download buttons.
+
+**Acceptance Criteria:**
+- [x] Show full transcription text (not truncated to 50 characters) when transcribed item is selected
+- [x] Add "Copy" button to copy full text to clipboard with "✓ Copied!" feedback
+- [x] Add "Download .txt" button to save transcription as UTF-8 .txt file with "✓ Saved!" feedback
+- [x] Display text in dedicated area below history list (hidden initially, shown on selection)
+- [x] Hide display when selection is cleared or items are deleted
+- [x] Multiple selections show most recent (newest-first sorting)
+
+- [2026-01-12] TASK-024: Full Transcription Display in History
+  - Added dedicated transcript display area in history section
+  - Added Copy and Download .txt buttons
+  - Modified _on_history_checkbox_changed() to show/hide transcript
+  - Status = Done
+
+---
+
+**TASK-025 | File Upload Download Button | Priority: P0 | Status: Done**
+
+Add Download button to "Transcribe from File" transcription result area.
+
+**Acceptance Criteria:**
+- [x] Add "Download .txt" button next to "Copy to Clipboard" button
+- [x] Download saves as UTF-8 .txt file with filename based on source file
+- [x] Button shows "✓ Saved!" feedback after successful download
+- [x] Fixed button layout (both buttons on left side, consistent with history)
+
+- [2026-01-12] TASK-025: File Upload Download Button
+  - Added Download button to file upload transcription result
+  - Added _download_file_transcript() method with file save dialog
+  - Fixed Copy button layout from side="right" to side="left"
+  - Status = Done
