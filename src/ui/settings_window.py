@@ -38,15 +38,20 @@ class SettingsWindow(ctk.CTk):
     INPUT_BORDER = ("#2a2a2a", "#333333")  # rgba(255,255,255,0.1)
     DANGER_COLOR = "#ff3b30"
 
-    def __init__(self, config: Config = None, on_save: Callable = None, **kwargs):
+    def __init__(self, config: Config = None, on_save: Callable = None, on_close: Callable = None, app=None, **kwargs):
         super().__init__(**kwargs)
 
         self._config = config if config else Config()
         self._on_save_callback = on_save
+        self._on_close_callback = on_close  # Callback when window is closed
+        self._app = app  # Reference to GroqWhisperApp for recording control
 
         self._setup_window()
         self._create_ui()
         self._load_settings()
+
+        # Handle window close button (X)
+        self.protocol("WM_DELETE_WINDOW", self._on_window_close)
 
     def _setup_window(self):
         """Configure window - CSS body styling."""
@@ -94,6 +99,7 @@ class SettingsWindow(ctk.CTk):
         self._create_mic_dropdown(body_frame)
         self._create_hotkey_field(body_frame)
         self._create_toggles(body_frame)
+        self._create_recording_button(body_frame)
         self._create_save_button(body_frame)
 
     def _create_header(self, parent):
@@ -120,7 +126,7 @@ class SettingsWindow(ctk.CTk):
         dot_size = 12
 
         # Close - #ff5f56
-        self._create_dot(dots_frame, "#ff5f56", dot_size, lambda e: self.destroy(), gap)
+        self._create_dot(dots_frame, "#ff5f56", dot_size, lambda e: self._on_window_close(), gap)
         # Minimize - #ffbd2e
         self._create_dot(dots_frame, "#ffbd2e", dot_size, lambda e: self.iconify(), gap)
         # Maximize - #27c93f
@@ -129,6 +135,15 @@ class SettingsWindow(ctk.CTk):
         # Border bottom - border-bottom: 1px solid rgba(255, 255, 255, 0.05)
         border = ctk.CTkFrame(parent, fg_color=("#1a1a1a", "#222222"), height=1)
         border.pack(fill="x", pady=(16, 0))
+
+    def _on_window_close(self):
+        """Handle window close button (X)."""
+        if self._on_close_callback:
+            # If running as part of GroqWhisperApp, minimize to tray
+            self.withdraw()
+        else:
+            # If running standalone, destroy normally
+            self.destroy()
 
     def _create_dot(self, parent, color, size, command, padx):
         """Create control dot - .control-dot"""
@@ -336,6 +351,35 @@ class SettingsWindow(ctk.CTk):
         )
         self._overlay_switch.pack(side="right")
 
+    def _create_recording_button(self, parent):
+        """Create prominent recording button."""
+        # Recording button container
+        button_frame = ctk.CTkFrame(parent, fg_color="transparent")
+        button_frame.pack(fill="x", pady=(20, 10))
+
+        # Recording button - large and prominent
+        self._record_button = ctk.CTkButton(
+            button_frame,
+            text="🎙 START RECORDING",
+            font=("Inter", 16, "bold"),
+            height=60,
+            corner_radius=12,
+            fg_color=self.ACCENT_COLOR,
+            hover_color=self.ACCENT_GLOW,
+            text_color=self.TEXT_PRIMARY,
+            command=self._toggle_recording
+        )
+        self._record_button.pack(fill="x")
+
+        # Hotkey hint
+        hint_label = ctk.CTkLabel(
+            button_frame,
+            text="or press Ctrl+Alt+K",
+            font=("Inter", 11),
+            text_color=self.TEXT_SECONDARY
+        )
+        hint_label.pack(pady=(5, 0))
+
     def _create_save_button(self, parent):
         """Save button - .btn-save CSS"""
         # background: var(--accent-color)
@@ -457,6 +501,26 @@ class SettingsWindow(ctk.CTk):
             self.attributes('-zoomed', False)
         else:
             self.attributes('-zoomed', True)
+
+    def _toggle_recording(self) -> None:
+        """Toggle recording state when button is pressed."""
+        if self._app:
+            self._app._on_hotkey_pressed()
+            self._update_recording_button()
+
+    def _update_recording_button(self) -> None:
+        """Update recording button text and color based on recording state."""
+        if self._app and hasattr(self._app, '_is_recording'):
+            if self._app._is_recording:
+                self._record_button.configure(
+                    text="⏹ STOP RECORDING",
+                    fg_color="#ff3b30"  # Red when recording
+                )
+            else:
+                self._record_button.configure(
+                    text="🎙 START RECORDING",
+                    fg_color=self.ACCENT_COLOR
+                )
 
 
 def test_settings_window():

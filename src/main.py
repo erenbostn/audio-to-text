@@ -45,10 +45,6 @@ class GroqWhisperApp:
         ctk.set_appearance_mode("Dark")
         ctk.set_default_color_theme("dark-blue")
 
-        # Create main root window (hidden, runs in background)
-        self.root = ctk.CTk()
-        self.root.withdraw()
-
         # Load configuration
         self.config = Config()
 
@@ -57,18 +53,19 @@ class GroqWhisperApp:
         self._settings_window = None
         self._shutdown_flag = False
 
-        # Setup components
+        # Setup core components (before UI)
         self._setup_components()
+
+        # Create SettingsWindow FIRST - it becomes the main root window
+        self._settings_window = SettingsWindow(self.config, on_close=self._on_settings_close, app=self)
+        self.root = self._settings_window  # Reference to main window
+
+        # Setup remaining components (overlay needs the root)
+        self._setup_remaining_components()
         self._setup_hotkeys()
 
-        # Validate API key on startup
-        self._validate_api_key()
-
-        # Register cleanup on exit
-        atexit.register(self._cleanup)
-
     def _setup_components(self) -> None:
-        """Initialize all application components."""
+        """Initialize core application components (before UI)."""
         # Core modules
         self.recorder = AudioRecorder(
             sample_rate=self.config.get_sample_rate(),
@@ -77,9 +74,6 @@ class GroqWhisperApp:
         self.transcriber = GroqTranscriber()
         self.injector = TextInjector()
 
-        # UI components
-        self.overlay = RecordingOverlay(self.root)
-
         # Utilities
         self.sound = SoundFeedback(self.config.play_beep)
         self.tray = SystemTray(
@@ -87,24 +81,26 @@ class GroqWhisperApp:
             on_quit=self.shutdown
         )
 
+    def _setup_remaining_components(self) -> None:
+        """Initialize UI components that need the root window."""
+        # UI components (overlay needs the root)
+        self.overlay = RecordingOverlay(self.root)
+
     def _setup_hotkeys(self) -> None:
         """Setup global hotkey listener."""
-        hotkey = self.config.get_hotkey()
+        # User requested: Ctrl+Alt+K for recording
+        recording_hotkey = '<ctrl>+<alt>+k'
 
         try:
             # pynput format: modifiers need to be in angle brackets, key doesn't
-            # Example: <ctrl>+<alt>+a (not <ctrl>+<alt>+<a>)
             hotkeys = {
-                hotkey: self._on_hotkey_pressed,
-                '<ctrl>+<alt>+s': self._show_settings,  # Settings hotkey
+                recording_hotkey: self._on_hotkey_pressed,
                 '<ctrl>+<alt>+q': self._quit_wrapper,  # Quit hotkey
-                '<ctrl>+<shift>+s': self._show_settings,  # Alternative settings hotkey
             }
             self.hotkey_listener = GlobalHotKeys(hotkeys)
             self.hotkey_listener.start()
             print(f"Hotkeys registered:")
-            print(f"  {hotkey} - Toggle recording")
-            print(f"  <ctrl>+<alt>+s or <ctrl>+<shift>+s - Open settings")
+            print(f"  {recording_hotkey} - Toggle recording")
             print(f"  <ctrl>+<alt>+q - Quit application")
         except Exception as e:
             print(f"Warning: Could not register hotkeys: {e}")
@@ -141,6 +137,10 @@ class GroqWhisperApp:
         self.recorder.start_recording()
         self.tray.update_tooltip("Recording...")
 
+        # Update settings button if visible
+        if self._settings_window:
+            self.root.after(0, self._settings_window._update_recording_button)
+
     def _stop_recording(self) -> None:
         """Stop recording and transcribe."""
         # Stop recording and get audio file
@@ -154,6 +154,10 @@ class GroqWhisperApp:
         self._is_recording = False
         self.overlay.hide()
         self.tray.update_tooltip("Processing...")
+
+        # Update settings button if visible
+        if self._settings_window:
+            self.root.after(0, self._settings_window._update_recording_button)
 
         # Transcribe
         try:
@@ -186,36 +190,27 @@ class GroqWhisperApp:
     def _show_settings_impl(self) -> None:
         """Implementation of showing settings (runs on main thread)."""
         try:
-            # Check if settings window already exists
-            if self._settings_window is None or not self._settings_window.winfo_exists():
-                print("Creating new settings window...")
-                self._settings_window = SettingsWindow(self.config, self.root)
-                self._settings_window.protocol("WM_DELETE_WINDOW", self._on_settings_close)
-            else:
-                print("Bringing existing settings window to front...")
+            # SettingsWindow IS the main window - just show it
+            if self._settings_window and self._settings_window.winfo_exists():
+                print("Bringing settings window to front...")
                 self._settings_window.lift()
                 self._settings_window.focus_set()
                 self._settings_window.deiconify()
+            else:
+                print("Settings window not found - this shouldn't happen")
         except Exception as e:
             print(f"Error in settings impl: {e}")
 
     def _on_settings_close(self) -> None:
-        """Handle settings window close."""
-        self._settings_window.destroy()
-        self._settings_window = None
+        """Handle settings window close - minimize to tray."""
+        # The window is already withdrawn/hidden by SettingsWindow._on_window_close
+        print("Settings window minimized to tray.")
 
     def run(self) -> None:
         """Start the application main loop."""
         print("GroqWhisper Desktop - Starting...")
+        print("Settings window will open on startup.")
         print("=" * 50)
-        print("AVAILABLE HOTKEYS:")
-        print(f"  {self.config.get_hotkey()} - Toggle recording")
-        print("  Ctrl+Alt+S - Open settings")
-        print("  Ctrl+Alt+Q - Quit application")
-        print("=" * 50)
-        print("Tip: If tray icon is hidden, check Windows notification settings")
-        print("       (click ▲ near clock, find GroqWhisper, enable show)")
-        print("Press Ctrl+C in terminal to quit")
 
         # Setup signal handlers for graceful shutdown
         def signal_handler(sig, frame):
