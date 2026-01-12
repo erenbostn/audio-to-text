@@ -376,3 +376,40 @@ Add language selector for transcription language.
 - [2026-01-12] TASK-020: Multi-Language Support
   - Added language selector dropdown with 7 options
   - Status = Done
+
+---
+
+**TASK-021 | File Upload Transcription UI Improvements | Priority: P1 | Status: Done**
+
+Add transcription result display and visual feedback for file upload.
+
+**Acceptance Criteria:**
+- [x] Add result text box (CTkTextbox) below file upload section
+- [x] Add "Copy to Clipboard" button with "✓ Copied!" feedback
+- [x] Button shows loading state: "Transcribing..." (disabled, gray)
+- [x] Button shows success state: "✓ Done" (green, 2s) → back to normal
+- [x] Button shows error state: "✗ Failed" (red, 2s) → back to normal
+- [x] Transcription runs in separate thread (non-blocking UI)
+- [x] Error messages display in result text box with red text
+- [x] Window size increased: 450x750 → 450x900
+- [x] Add pyperclip and threading imports
+
+- [2026-01-12] TASK-021: File Upload Transcription UI Improvements
+  - Added transcription result display with copy button
+  - Added visual feedback with button state changes
+  - Status = Done
+
+---
+
+**TASK-022 | File Upload Threading Bug Fix | Priority: P0 | Status: Done**
+
+Fix AttributeError when transcribing from file in threaded context.
+
+**Acceptance Criteria:**
+- [x] Fix `self.root.after()` → `self.after()` in _transcribe_file()
+- [x] SettingsWindow IS the CTk root (no separate .root attribute)
+- [x] Thread-safe UI updates now work correctly
+
+- [2026-01-12] TASK-022: File Upload Threading Bug Fix
+  - Fixed self.root.after() AttributeError (should be self.after())
+  - Status = Done

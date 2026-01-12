@@ -9,6 +9,8 @@ from tkinter import messagebox
 from typing import Callable
 import sys
 from pathlib import Path
+import pyperclip
+import threading
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from config import Config
@@ -62,7 +64,7 @@ class SettingsWindow(ctk.CTk):
     def _setup_window(self):
         """Configure window - CSS body styling."""
         self.title("GroqWhisper Settings")
-        self.geometry("450x750")  # Increased for history + file upload
+        self.geometry("450x900")  # Increased for history + file upload + result display
 
         # Deep background --bg-color: #0c0c0c
         self.configure(fg_color=self.BG_COLOR)
@@ -72,7 +74,7 @@ class SettingsWindow(ctk.CTk):
 
     def _center_window(self):
         self.update_idletasks()
-        width, height = 450, 750  # Increased for history + file upload
+        width, height = 450, 900  # Increased for history + file upload + result display
         x = (self.winfo_screenwidth() - width) // 2
         y = (self.winfo_screenheight() - height) // 2
         self.geometry(f"{width}x{height}+{x}+{y}")
@@ -555,6 +557,50 @@ class SettingsWindow(ctk.CTk):
         )
         self._transcribe_file_btn.pack(fill="x", pady=(8, 0))
 
+        # Transcription Result section (hidden initially)
+        self._transcript_result_label = ctk.CTkLabel(
+            form_frame,
+            text="Transcription Result:",
+            font=("Inter", 12, "normal"),
+            text_color=self.TEXT_SECONDARY,
+            anchor="w"
+        )
+        self._transcript_result_label.pack(fill="x", pady=(16, 8))
+        self._transcript_result_label.pack_forget()  # Hide initially
+
+        # Result text box
+        self._transcript_result_text = ctk.CTkTextbox(
+            form_frame,
+            height=100,
+            font=("Inter", 13),
+            corner_radius=8,
+            border_color=self.INPUT_BORDER,
+            border_width=1,
+            fg_color=self.INPUT_BG,
+            text_color=self.TEXT_PRIMARY,
+            wrap="word"
+        )
+        self._transcript_result_text.pack(fill="x")
+        self._transcript_result_text.pack_forget()  # Hide initially
+
+        # Copy button frame
+        self._copy_result_btn_frame = ctk.CTkFrame(form_frame, fg_color="transparent")
+        self._copy_result_btn_frame.pack(fill="x", pady=(8, 0))
+        self._copy_result_btn_frame.pack_forget()  # Hide initially
+
+        self._copy_transcript_btn = ctk.CTkButton(
+            self._copy_result_btn_frame,
+            text="Copy to Clipboard",
+            font=("Inter", 12),
+            height=38,
+            corner_radius=8,
+            fg_color=("#333333", "#404040"),
+            hover_color=("#444444", "#505050"),
+            text_color=self.TEXT_PRIMARY,
+            command=self._copy_transcript_result
+        )
+        self._copy_transcript_btn.pack(side="right")
+
     def _create_recording_button(self, parent):
         """Create prominent recording button."""
         # Recording button container
@@ -914,6 +960,35 @@ class SettingsWindow(ctk.CTk):
             self._transcribe_file_btn.configure(state="normal")
             print(f"[DEBUG] Selected file: {self._selected_file}")
 
+    def _show_transcript_result(self, text: str) -> None:
+        """Show transcription result in the text area."""
+        self._transcript_result_label.pack(fill="x", pady=(16, 8))
+        self._transcript_result_text.pack(fill="x")
+        self._copy_result_btn_frame.pack(fill="x", pady=(8, 0))
+
+        # Insert text
+        self._transcript_result_text.delete("1.0", "end")
+        self._transcript_result_text.insert("1.0", text)
+
+        # Reset text color (in case it was error red)
+        self._transcript_result_text.configure(text_color=self.TEXT_PRIMARY)
+
+    def _hide_transcript_result(self) -> None:
+        """Hide the transcription result section."""
+        self._transcript_result_label.pack_forget()
+        self._transcript_result_text.pack_forget()
+        self._copy_result_btn_frame.pack_forget()
+
+    def _copy_transcript_result(self) -> None:
+        """Copy the transcription result to clipboard."""
+        text = self._transcript_result_text.get("1.0", "end").strip()
+        if text:
+            pyperclip.copy(text)
+            # Show "Copied!" feedback
+            original_text = self._copy_transcript_btn.cget("text")
+            self._copy_transcript_btn.configure(text="✓ Copied!")
+            self.after(1500, lambda: self._copy_transcript_btn.configure(text=original_text))
+
     def _transcribe_file(self) -> None:
         """Transcribe the selected file."""
         if not self._selected_file:
@@ -924,21 +999,87 @@ class SettingsWindow(ctk.CTk):
             print("[DEBUG] No app reference")
             return
 
-        print(f"[DEBUG] Transcribing file: {self._selected_file}")
+        # Save original button state
+        original_text = self._transcribe_file_btn.cget("text")
+        original_color = self._transcribe_file_btn.cget("fg_color")
 
-        try:
-            # Get language from config
-            lang = self._config.get_language()
-            lang_param = None if lang == "auto" else lang
-            text = self._app.transcriber.transcribe(self._selected_file, language=lang_param)
-            print(f"[DEBUG] Transcription result: {text[:50] if text else 'None'}...")
-            if text:
+        # Set loading state
+        self._transcribe_file_btn.configure(
+            text="Transcribing...",
+            state="disabled",
+            fg_color=("#666666", "#777777")
+        )
+
+        # Hide previous result
+        self._hide_transcript_result()
+
+        def do_transcribe():
+            try:
+                # Get language from config
+                lang = self._config.get_language()
+                lang_param = None if lang == "auto" else lang
+                text = self._app.transcriber.transcribe(self._selected_file, language=lang_param)
+
+                # Update UI on main thread
+                self.after(0, lambda: self._on_transcription_complete(text, original_text, original_color))
+            except Exception as e:
+                error_msg = str(e)
+                self.after(0, lambda: self._on_transcription_error(error_msg, original_text, original_color))
+
+        # Run transcription in thread to avoid blocking UI
+        thread = threading.Thread(target=do_transcribe, daemon=True)
+        thread.start()
+
+    def _on_transcription_complete(self, text: str, original_text: str, original_color):
+        """Called when transcription completes successfully."""
+        if text:
+            # Show result in UI
+            self._show_transcript_result(text)
+
+            # Still inject text for user convenience
+            try:
                 self._app.injector.inject_text(text)
-                print(f"Transcribed file: {self._selected_file}")
-            else:
-                print("Transcription returned empty result.")
-        except Exception as e:
-            print(f"Error transcribing file: {e}")
+            except:
+                pass  # Injection is optional, don't fail if it doesn't work
+
+            # Update button to success state
+            self._transcribe_file_btn.configure(
+                text="✓ Done",
+                fg_color="#27c93f"
+            )
+
+            # Reset button after 2 seconds
+            self.after(2000, lambda: self._transcribe_file_btn.configure(
+                text=original_text,
+                fg_color=original_color,
+                state="normal"
+            ))
+
+            print(f"[INFO] Transcribed file: {self._selected_file}")
+        else:
+            self._on_transcription_error("Empty result", original_text, original_color)
+
+    def _on_transcription_error(self, error_msg: str, original_text: str, original_color):
+        """Called when transcription fails."""
+        # Show error in result area
+        self._show_transcript_result(f"Error: {error_msg}")
+        self._transcript_result_text.configure(text_color="#ff3b30")
+
+        # Update button to error state
+        self._transcribe_file_btn.configure(
+            text="✗ Failed",
+            fg_color="#ff3b30"
+        )
+
+        # Reset button after 2 seconds
+        self.after(2000, lambda: self._transcribe_file_btn.configure(
+            text=original_text,
+            fg_color=original_color,
+            text_color=self.TEXT_PRIMARY,
+            state="normal"
+        ))
+
+        print(f"[ERROR] Transcription failed: {error_msg}")
 
 
 def test_settings_window():

@@ -105,6 +105,25 @@
     - Language selection persists in .env file
     - Transcriptions now use selected language instead of hardcoded Turkish
 
+- [2026-01-12] File Upload Transcription UI Improvements
+  - What changed: Added transcription result display, copy button, and visual feedback for file upload
+  - Affected area: src/ui/settings_window.py
+  - Notes:
+    - Added result text box (CTkTextbox) below file upload section
+    - Added "Copy to Clipboard" button with feedback
+    - Button now shows loading state: "Transcribing..." → "✓ Done" / "✗ Failed"
+    - Transcription runs in thread (non-blocking UI)
+    - Window size increased: 450x750 → 450x900
+    - Results display in UI (previously only debug output + clipboard injection)
+
+- [2026-01-12] File Upload Threading Bug Fix
+  - What changed: Fixed AttributeError in _transcribe_file() thread callback
+  - Affected area: src/ui/settings_window.py
+  - Notes:
+    - Fixed: `self.root.after()` → `self.after()` (lines 1024, 1027)
+    - Root cause: SettingsWindow IS the CTk root, has no .root attribute
+    - Thread-safe UI updates now work correctly
+
 ---
 
 ## KNOWN ISSUES / UNKNOWNS (AI-maintained)
