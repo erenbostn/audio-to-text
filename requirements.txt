@@ -1,0 +1,25 @@
+# GroqWhisper Desktop - Audio to Text Utility
+# Python 3.10+ | Windows Only
+
+# UI Framework
+customtkinter>=5.2.0
+
+# Audio Recording
+sounddevice>=0.4.6
+numpy>=1.24.0
+
+# System Tray & Icons
+pystray>=0.19.5
+Pillow>=10.0.0
+
+# Global Hotkeys
+pynput>=1.7.6
+
+# Groq API Client
+groq>=0.4.1
+
+# Configuration
+python-dotenv>=1.0.0
+
+# Text Injection
+pyautogui>=0.9.54
