@@ -79,6 +79,20 @@ class Config:
         """Get beep sound preference."""
         return os.getenv("PLAY_BEEP_SOUND", "true").lower() == "true"
 
+    def get_language(self) -> str:
+        """Get transcription language code."""
+        return os.getenv("TRANSCRIPTION_LANGUAGE", "tr")
+
+    def save_language(self, language: str) -> None:
+        """
+        Save transcription language to .env.
+
+        Args:
+            language: Language code (e.g., "tr", "en", "de").
+        """
+        self._save_env_value("TRANSCRIPTION_LANGUAGE", language)
+        os.environ["TRANSCRIPTION_LANGUAGE"] = language
+
     def reload_env(self) -> None:
         """Reload environment variables from .env file."""
         load_dotenv(self.env_path, override=True)

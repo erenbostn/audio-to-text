@@ -323,3 +323,56 @@ Fix Save Configuration button not responding to clicks.
 - [2026-01-12] TASK-017: Save Configuration Button Bug Fix
   - Fixed missing command parameter on save button
   - Status = Done
+
+---
+
+**TASK-018 | Project Cleanup | Priority: P2 | Status: Done**
+
+Remove empty/unused directories to clean up project structure.
+
+**Acceptance Criteria:**
+- [x] Delete tests/ directory (contained only __init__.py, no actual tests)
+- [x] Verify all source code is actively used
+- [x] Verify all dependencies are necessary
+- [x] Verify venv/ is properly gitignored
+
+- [2026-01-12] TASK-018: Project Cleanup
+  - Removed empty tests/ directory
+  - Verified project health: all code active, all deps necessary
+  - Status = Done
+
+---
+
+**TASK-019 | File Size Check for Transcription | Priority: P1 | Status: Done**
+
+Add file size validation before transcription to prevent partial results.
+
+**Acceptance Criteria:**
+- [x] Add MAX_FILE_SIZE_MB (25 MB) and WARNING_THRESHOLD_MB (20 MB) constants
+- [x] Add _check_file_size() method to validate audio file size
+- [x] Show file size info in MB before transcription
+- [x] Warn user when file exceeds 20 MB
+- [x] Block transcription when file exceeds 25 MB
+
+- [2026-01-12] TASK-019: File Size Check for Transcription
+  - Added file size validation before Groq API call
+  - Status = Done
+
+---
+
+**TASK-020 | Multi-Language Support | Priority: P1 | Status: Done**
+
+Add language selector for transcription language.
+
+**Acceptance Criteria:**
+- [x] Add get_language() and save_language() methods to Config
+- [x] Add language dropdown to settings window UI
+- [x] Support Turkish, English, German, French, Spanish, Italian, Auto-detect
+- [x] Save/load language from .env (TRANSCRIPTION_LANGUAGE)
+- [x] Update transcription calls to use selected language
+- [x] Auto-detect passes None to Whisper API
+- [x] Update .env.example with new setting
+
+- [2026-01-12] TASK-020: Multi-Language Support
+  - Added language selector dropdown with 7 options
+  - Status = Done

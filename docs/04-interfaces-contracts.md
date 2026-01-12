@@ -216,3 +216,39 @@ If a task requires changing any contract:
   - Previous behavior: Only record-through-microphone supported
   - New behavior: External audio files can be transcribed via file dialog
   - Compatibility notes: Backward-compatible (recording still works)
+
+---
+
+### TRANSLANG-001: Transcription Language Configuration
+
+**Purpose:** Configure transcription language for better accuracy
+
+**Contract:**
+- **Config Key:** `TRANSCRIPTION_LANGUAGE` in .env file
+- **Default Value:** `tr` (Turkish)
+- **Valid Values:** `tr`, `en`, `de`, `fr`, `es`, `it`, `auto`
+- **Storage:** .env file, loaded via python-dotenv
+- **API Mapping:**
+  - Language codes (`tr`, `en`, etc.) → passed to Groq API as `language` parameter
+  - `auto` → `None` passed to API (Whisper auto-detects language)
+
+**UI Component:**
+- Dropdown menu in settings window labeled "Transcription Language"
+- Options display:
+  - "Turkish - Türkçe"
+  - "English"
+  - "German - Deutsch"
+  - "French - Français"
+  - "Spanish - Español"
+  - "Italian - Italiano"
+  - "Auto-detect"
+
+**Methods:**
+- `Config.get_language()` → Returns current language code from env
+- `Config.save_language(code)` → Saves to .env and updates os.environ
+
+- [2026-01-12] TRANSLANG-001: Transcription Language Configuration (NEW)
+  - Change type: New feature
+  - Previous behavior: Hardcoded to Turkish (`language="tr"`)
+  - New behavior: User-selectable language with auto-detect option
+  - Compatibility notes: Backward-compatible (defaults to Turkish)

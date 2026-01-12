@@ -33,6 +33,10 @@ class GroqTranscriber:
     MAX_RETRIES = 3
     RETRY_DELAY = 1.0  # seconds
 
+    # Groq API file size limit (25 MB)
+    MAX_FILE_SIZE_MB = 25
+    WARNING_THRESHOLD_MB = 20  # Warn at 20 MB
+
     def __init__(self, api_key: Optional[str] = None):
         """
         Initialize the Groq transcriber.
@@ -52,7 +56,32 @@ class GroqTranscriber:
 
         self.client = Groq(api_key=api_key)
 
-    def transcribe(self, audio_file_path: str, language: str = "tr") -> Optional[str]:
+    def _check_file_size(self, audio_file_path: str) -> bool:
+        """
+        Check audio file size against Groq API limits.
+
+        Args:
+            audio_file_path: Path to the audio file
+
+        Returns:
+            True if file size is acceptable, False if too large
+        """
+        file_size_bytes = Path(audio_file_path).stat().st_size
+        file_size_mb = file_size_bytes / (1024 * 1024)
+
+        print(f"[INFO] Audio file size: {file_size_mb:.2f} MB")
+
+        if file_size_mb >= self.MAX_FILE_SIZE_MB:
+            print(f"[ERROR] File too large! Groq API limit is {self.MAX_FILE_SIZE_MB} MB.")
+            print(f"[ERROR] Your file is {file_size_mb:.2f} MB. Please record a shorter audio.")
+            return False
+
+        if file_size_mb >= self.WARNING_THRESHOLD_MB:
+            print(f"[WARNING] File is large ({file_size_mb:.2f} MB). Approaching API limit of {self.MAX_FILE_SIZE_MB} MB.")
+
+        return True
+
+    def transcribe(self, audio_file_path: str, language: Optional[str] = "tr") -> Optional[str]:
         """
         Transcribe an audio file using Groq's Whisper API.
 
@@ -66,6 +95,10 @@ class GroqTranscriber:
         # Validate file exists
         if not Path(audio_file_path).exists():
             print(f"Error: Audio file not found: {audio_file_path}")
+            return None
+
+        # Check file size before attempting transcription
+        if not self._check_file_size(audio_file_path):
             return None
 
         # Try transcription with retry logic
@@ -93,7 +126,7 @@ class GroqTranscriber:
 
         return None
 
-    def _transcribe_once(self, audio_file_path: str, language: str = "tr") -> str:
+    def _transcribe_once(self, audio_file_path: str, language: Optional[str] = "tr") -> str:
         """
         Perform a single transcription attempt.
 
@@ -122,13 +155,19 @@ class GroqTranscriber:
             # Create filename for API (Groq needs the original filename)
             filename = Path(audio_file_path).name
 
-            # Call Groq API with language parameter
-            transcription = self.client.audio.transcriptions.create(
-                file=(filename, audio_file.read()),
-                model=self.MODEL,
-                response_format="text",
-                language=language
-            )
+            # Build API parameters
+            api_params = {
+                "file": (filename, audio_file.read()),
+                "model": self.MODEL,
+                "response_format": "text"
+            }
+
+            # Only include language parameter if not None (auto-detect)
+            if language is not None:
+                api_params["language"] = language
+
+            # Call Groq API
+            transcription = self.client.audio.transcriptions.create(**api_params)
 
         return transcription
 

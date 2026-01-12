@@ -76,6 +76,35 @@
     - Added missing `command=self._save_config` parameter to save button
     - Button now correctly saves API key, beep setting, and overlay setting to .env file
 
+- [2026-01-12] Project Cleanup
+  - What changed: Removed empty tests/ directory
+  - Affected area: tests/ directory (deleted)
+  - Notes:
+    - tests/ contained only __init__.py, no actual tests
+    - TASK-012 (Unit Tests) remains in backlog for future implementation
+    - All source code verified as actively used
+    - All dependencies verified as necessary
+
+- [2026-01-12] File Size Check for Transcription
+  - What changed: Added file size validation before Groq API transcription
+  - Affected area: src/core/transcriber.py
+  - Notes:
+    - Added _check_file_size() method to validate audio file size
+    - Shows file size info in MB before transcription
+    - Warns when file exceeds 20 MB (approaching 25 MB Groq API limit)
+    - Blocks transcription when file exceeds 25 MB
+    - Helps users understand why long recordings may fail partially
+
+- [2026-01-12] Multi-Language Support
+  - What changed: Added language selector dropdown for transcription
+  - Affected area: src/config.py, src/core/transcriber.py, src/ui/settings_window.py, .env.example
+  - Notes:
+    - Added TRANSCRIPTION_LANGUAGE config option (default: tr)
+    - Language dropdown in settings: Turkish, English, German, French, Spanish, Italian, Auto-detect
+    - Auto-detect option passes None to Whisper API for automatic language detection
+    - Language selection persists in .env file
+    - Transcriptions now use selected language instead of hardcoded Turkish
+
 ---
 
 ## KNOWN ISSUES / UNKNOWNS (AI-maintained)

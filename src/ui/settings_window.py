@@ -50,6 +50,7 @@ class SettingsWindow(ctk.CTk):
         self._history_checkboxes: dict[str, ctk.CTkCheckBox] = {}
         self._history_items: dict[str, dict] = {}  # id -> {checkbox, labels}
         self._selected_file: str | None = None  # For file upload
+        self._selected_language_code: str = "tr"  # Default to Turkish
 
         self._setup_window()
         self._create_ui()
@@ -115,6 +116,7 @@ class SettingsWindow(ctk.CTk):
         # Original sections (below)
         self._create_api_key_field(body_frame)
         self._create_mic_dropdown(body_frame)
+        self._create_language_dropdown(body_frame)
         self._create_hotkey_field(body_frame)
         self._create_toggles(body_frame)
         self._create_recording_button(body_frame)
@@ -259,6 +261,65 @@ class SettingsWindow(ctk.CTk):
             anchor="w"
         )
         self._mic_dropdown.pack(fill="x")
+
+    def _create_language_dropdown(self, parent):
+        """Language selection dropdown"""
+        form_frame = ctk.CTkFrame(parent, fg_color="transparent")
+        form_frame.pack(fill="x", pady=(0, 20))
+
+        label = ctk.CTkLabel(
+            form_frame,
+            text="Transcription Language",
+            font=("Inter", 12, "normal"),
+            text_color=self.TEXT_SECONDARY,
+            anchor="w"
+        )
+        label.pack(fill="x", pady=(0, 8))
+
+        # Language options with native names
+        languages = [
+            ("Turkish - Türkçe", "tr"),
+            ("English", "en"),
+            ("German - Deutsch", "de"),
+            ("French - Français", "fr"),
+            ("Spanish - Español", "es"),
+            ("Italian - Italiano", "it"),
+            ("Auto-detect", "auto")
+        ]
+
+        self._language_dropdown = ctk.CTkOptionMenu(
+            form_frame,
+            values=[lang[0] for lang in languages],
+            font=("Inter", 14, "normal"),
+            height=45,
+            corner_radius=8,
+            fg_color=self.INPUT_BG,
+            button_color=self.ACCENT_COLOR,
+            button_hover_color=self.ACCENT_GLOW,
+            dropdown_font=("Inter", 13),
+            dropdown_fg_color=self.GLASS_BG,
+            dropdown_hover_color=self.ACCENT_COLOR,
+            dropdown_text_color=self.TEXT_PRIMARY,
+            text_color=self.TEXT_PRIMARY,
+            anchor="w",
+            command=self._on_language_changed
+        )
+        self._language_dropdown.pack(fill="x")
+
+        # Store language code mapping
+        self._language_map = {lang[0]: lang[1] for lang in languages}
+
+    def _on_language_changed(self, selected_label: str) -> None:
+        """Handle language dropdown change."""
+        new_lang_code = self._language_map.get(selected_label, "tr")
+        self._selected_language_code = new_lang_code
+
+        # Auto-save language to config
+        try:
+            self._config.save_language(new_lang_code)
+            print(f"[INFO] Language changed to: {new_lang_code}")
+        except Exception as e:
+            print(f"[ERROR] Failed to save language: {e}")
 
     def _create_hotkey_field(self, parent):
         """Hotkey display - read-only"""
@@ -569,6 +630,16 @@ class SettingsWindow(ctk.CTk):
         else:
             self._overlay_switch.deselect()
 
+        # Load language setting
+        saved_lang = self._config.get_language()
+        self._selected_language_code = saved_lang
+
+        # Find and set the dropdown value
+        for label, code in self._language_map.items():
+            if code == saved_lang:
+                self._language_dropdown.set(label)
+                break
+
     def _save_config(self):
         api_key = self._api_key_entry.get().strip()
         play_beep = self._beep_switch.get()
@@ -586,6 +657,8 @@ class SettingsWindow(ctk.CTk):
             # Use new config methods that also update os.environ
             self._config.save_beep_setting(play_beep)
             self._config.save_overlay_setting(show_overlay)
+            # Save language setting
+            self._config.save_language(self._selected_language_code)
             self._show_save_success()
 
             if self._on_save_callback:
@@ -788,7 +861,11 @@ class SettingsWindow(ctk.CTk):
                 try:
                     from pathlib import Path
                     if Path(recording.filepath).exists():
-                        text = self._app.transcriber.transcribe(recording.filepath, language="tr")
+                        # Get language from config or use selected
+                        lang = self._config.get_language()
+                        # Use "auto" if selected, otherwise use the language code
+                        lang_param = None if lang == "auto" else lang
+                        text = self._app.transcriber.transcribe(recording.filepath, language=lang_param)
                         if text:
                             self._app.history.update_transcript(recording.id, text)
                             self._app.injector.inject_text(text)
@@ -850,7 +927,10 @@ class SettingsWindow(ctk.CTk):
         print(f"[DEBUG] Transcribing file: {self._selected_file}")
 
         try:
-            text = self._app.transcriber.transcribe(self._selected_file, language="tr")
+            # Get language from config
+            lang = self._config.get_language()
+            lang_param = None if lang == "auto" else lang
+            text = self._app.transcriber.transcribe(self._selected_file, language=lang_param)
             print(f"[DEBUG] Transcription result: {text[:50] if text else 'None'}...")
             if text:
                 self._app.injector.inject_text(text)
