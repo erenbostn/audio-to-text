@@ -282,10 +282,28 @@
             <!-- History Section -->
             <section class="space-y-4 pt-4 border-t border-gray-800">
                 <div class="flex items-center justify-between">
-                    <h2 class="text-xs uppercase tracking-wider text-gray-500 font-semibold">History</h2>
+                    <div class="flex items-center gap-3">
+                        <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll()"
+                            class="w-4 h-4 rounded border-gray-600 bg-gray-700 text-orange-500 focus:ring-offset-gray-900 focus:ring-orange-500 hidden">
+                        <h2 class="text-xs uppercase tracking-wider text-gray-500 font-semibold">History</h2>
+                        <span id="selectedCount" class="text-xs text-orange-400 hidden">(0 selected)</span>
+                    </div>
                     <button onclick="clearHistory()"
                         class="text-xs text-red-400 hover:text-red-300 transition-colors hidden" id="clearBtn">Clear
                         All</button>
+                </div>
+
+                <!-- Bulk Actions Bar -->
+                <div id="bulkActionsBar"
+                    class="hidden flex items-center gap-2 p-2 bg-gray-800/60 border border-gray-700 rounded-lg">
+                    <button onclick="mergeSelected()"
+                        class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded-lg transition-colors">
+                        <span>🔗</span> Merge
+                    </button>
+                    <button onclick="deleteSelected()"
+                        class="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white text-xs font-medium rounded-lg transition-colors">
+                        <span>🗑️</span> Delete Selected
+                    </button>
                 </div>
 
                 <div id="historyList" class="space-y-2 min-h-[100px]">
@@ -539,6 +557,8 @@
             const el = document.getElementById(id);
             el.type = el.type === 'password' ? 'text' : 'password';
         }
+        // Store history data globally for batch operations
+        let currentHistoryItems = [];
 
         function updateHistory(historyData) {
             renderHistory(historyData);
@@ -546,30 +566,45 @@
 
         function renderHistory(historyItems) {
             const container = document.getElementById('historyList');
+            currentHistoryItems = historyItems || [];
+
             if (!historyItems || historyItems.length === 0) {
                 container.innerHTML = '<div class="text-center py-8 text-gray-600 text-sm">No recordings yet</div>';
                 document.getElementById('clearBtn').classList.add('hidden');
+                document.getElementById('selectAllCheckbox').classList.add('hidden');
+                document.getElementById('bulkActionsBar').classList.add('hidden');
+                document.getElementById('selectedCount').classList.add('hidden');
                 return;
             }
 
             const isEditable = document.getElementById('allowEditToggle')?.checked || false;
             document.getElementById('clearBtn').classList.remove('hidden');
+            document.getElementById('selectAllCheckbox').classList.remove('hidden');
 
             container.innerHTML = historyItems.map((item, index) => `
-                <div class="bg-gray-800/40 border border-gray-700/50 rounded-lg p-3 hover:border-gray-600 transition-colors group">
-                    <div class="flex justify-between items-start mb-2">
-                        <div class="text-xs text-gray-500 font-mono">${item.timestamp}</div>
-                        <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onclick="copyText('${item.id}')" class="text-xs text-blue-400 hover:text-blue-300">Copy</button>
+                <div class="bg-gray-800/40 border border-gray-700/50 rounded-lg p-3 hover:border-gray-600 transition-colors group" data-id="${item.id}">
+                    <div class="flex items-start gap-3">
+                        <input type="checkbox" class="item-checkbox w-4 h-4 mt-1 rounded border-gray-600 bg-gray-700 text-orange-500 focus:ring-offset-gray-900 focus:ring-orange-500" 
+                            data-id="${item.id}" onchange="updateSelection()">
+                        <div class="flex-1">
+                            <div class="flex justify-between items-start mb-2">
+                                <div class="text-xs text-gray-500 font-mono">${item.timestamp}</div>
+                                <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button onclick="copyText('${item.id}')" class="text-xs text-blue-400 hover:text-blue-300">Copy</button>
+                                </div>
+                            </div>
+                            <textarea id="text-${item.id}" 
+                                class="w-full bg-transparent text-sm text-gray-200 leading-relaxed font-light resize-none outline-none ${isEditable ? 'border border-gray-600 rounded p-1' : ''}"
+                                rows="2" 
+                                ${isEditable ? '' : 'readonly'}
+                                onblur="updateHistoryText('${item.id}', this.value)">${item.text}</textarea>
                         </div>
                     </div>
-                    <textarea id="text-${item.id}" 
-                        class="w-full bg-transparent text-sm text-gray-200 leading-relaxed font-light resize-none outline-none ${isEditable ? 'border border-gray-600 rounded p-1' : ''}"
-                        rows="2" 
-                        ${isEditable ? '' : 'readonly'}
-                        onblur="updateHistoryText('${item.id}', this.value)">${item.text}</textarea>
                 </div>
             `).join('');
+
+            // Reset selection state
+            updateSelection();
         }
 
         // Toggle edit mode for history textareas
@@ -635,6 +670,92 @@
             if (isEditable && newText) {
                 await pywebview.api.update_history_text(id, newText);
             }
+        }
+
+        // --- BATCH PROCESSING FUNCTIONS ---
+
+        // Update selection state and show/hide bulk actions
+        function updateSelection() {
+            const checkboxes = document.querySelectorAll('.item-checkbox');
+            const checked = document.querySelectorAll('.item-checkbox:checked');
+            const count = checked.length;
+
+            const bulkBar = document.getElementById('bulkActionsBar');
+            const countSpan = document.getElementById('selectedCount');
+            const selectAll = document.getElementById('selectAllCheckbox');
+
+            if (count > 0) {
+                bulkBar.classList.remove('hidden');
+                countSpan.classList.remove('hidden');
+                countSpan.textContent = `(${count} selected)`;
+            } else {
+                bulkBar.classList.add('hidden');
+                countSpan.classList.add('hidden');
+            }
+
+            // Update Select All checkbox state
+            selectAll.checked = checkboxes.length > 0 && checked.length === checkboxes.length;
+            selectAll.indeterminate = count > 0 && count < checkboxes.length;
+        }
+
+        // Toggle Select All
+        function toggleSelectAll() {
+            const selectAll = document.getElementById('selectAllCheckbox');
+            const checkboxes = document.querySelectorAll('.item-checkbox');
+            checkboxes.forEach(cb => cb.checked = selectAll.checked);
+            updateSelection();
+        }
+
+        // Get selected item IDs
+        function getSelectedIds() {
+            const checked = document.querySelectorAll('.item-checkbox:checked');
+            return Array.from(checked).map(cb => cb.dataset.id);
+        }
+
+        // Merge selected items into a new history entry
+        async function mergeSelected() {
+            const selectedIds = getSelectedIds();
+            if (selectedIds.length === 0) return;
+
+            // Get texts in order (oldest first based on array order which is newest first, so reverse)
+            const selectedItems = currentHistoryItems.filter(item => selectedIds.includes(item.id));
+            selectedItems.reverse(); // Oldest first
+
+            // Get current text from textareas (in case edited)
+            const texts = selectedItems.map(item => {
+                const textarea = document.getElementById(`text-${item.id}`);
+                return textarea ? textarea.value : item.text;
+            });
+
+            const mergedText = texts.join(' ');
+
+            // Create new history entry with merged text via API
+            await pywebview.api.create_merged_entry(mergedText);
+
+            // Refresh history
+            const history = await pywebview.api.get_history();
+            renderHistory(history);
+
+            // Uncheck all
+            document.getElementById('selectAllCheckbox').checked = false;
+
+            showToast(`🔗 Merged ${selectedIds.length} items`, 'success');
+        }
+
+        // Delete selected items
+        async function deleteSelected() {
+            const selectedIds = getSelectedIds();
+            if (selectedIds.length === 0) return;
+
+            for (const id of selectedIds) {
+                await pywebview.api.delete_recording(id);
+            }
+
+            // Refresh history
+            const history = await pywebview.api.get_history();
+            renderHistory(history);
+
+            showToast(`🗑️ Deleted ${selectedIds.length} items`, 'info');
         }
 
         async function copyText(id) {

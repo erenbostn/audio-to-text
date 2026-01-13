@@ -143,6 +143,35 @@ class Api:
         self._history.update_transcript(recording_id, new_text)
         print(f"[API] Updated history text for {recording_id}")
 
+    def delete_recording(self, recording_id: str) -> bool:
+        """Delete a single recording from history."""
+        result = self._history.delete_recording(recording_id)
+        print(f"[API] Deleted recording: {recording_id}")
+        return result
+
+    def create_merged_entry(self, merged_text: str) -> str:
+        """Create a new history entry with merged text."""
+        import time
+        import pyautogui
+        from models.recording import SourceType
+        
+        # Create a new history entry (no file, just text)
+        # add_recording returns the actual recording_id it created
+        recording_id = self._history.add_recording("merged", source=SourceType.FILE)
+        self._history.update_transcript(recording_id, merged_text)
+        
+        # Copy to clipboard
+        pyperclip.copy(merged_text)
+        print(f"[API] Created merged entry: {recording_id}")
+        
+        # Auto-paste if enabled
+        if self._config.auto_paste_enabled():
+            time.sleep(0.1)
+            pyautogui.hotkey('ctrl', 'v')
+            print("[API] Merged text auto-pasted")
+        
+        return recording_id
+
     def toggle_recording(self) -> None:
         """Toggle recording state manually from UI."""
         # Run in thread to avoid blocking UI
