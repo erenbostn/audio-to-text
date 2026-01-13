@@ -178,7 +178,7 @@
                     <div class="group">
                         <label class="block text-sm font-medium text-gray-400 mb-1.5">Groq API Key</label>
                         <div class="relative">
-                            <input type="password" id="apiKey"
+                            <input type="password" id="apiKey" onblur="saveApiKeyInstant()"
                                 class="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all outline-none placeholder-gray-600"
                                 placeholder="gsk_...">
                             <button onclick="toggleVisibility('apiKey')"
@@ -198,7 +198,7 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-400 mb-1.5">Microphone</label>
                         <div class="relative">
-                            <select id="micSelect"
+                            <select id="micSelect" onchange="saveMicInstant()"
                                 class="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all outline-none appearance-none cursor-pointer">
                                 <option>Loading devices...</option>
                             </select>
@@ -242,18 +242,21 @@
                             class="flex flex-col items-center p-3 bg-gray-800/30 border border-gray-700 rounded-lg cursor-pointer hover:bg-gray-800/50 transition-colors">
                             <span class="text-xs font-medium text-gray-400 mb-2">Sound</span>
                             <input type="checkbox" id="soundToggle"
+                                onchange="saveToggleInstant('sound_enabled', this.checked)"
                                 class="w-4 h-4 rounded border-gray-600 bg-gray-700 text-orange-500 focus:ring-offset-gray-900 focus:ring-orange-500">
                         </label>
                         <label
                             class="flex flex-col items-center p-3 bg-gray-800/30 border border-gray-700 rounded-lg cursor-pointer hover:bg-gray-800/50 transition-colors">
                             <span class="text-xs font-medium text-gray-400 mb-2">Auto-Paste</span>
                             <input type="checkbox" id="autoPasteToggle"
+                                onchange="saveToggleInstant('auto_paste_enabled', this.checked)"
                                 class="w-4 h-4 rounded border-gray-600 bg-gray-700 text-orange-500 focus:ring-offset-gray-900 focus:ring-orange-500">
                         </label>
                         <label
                             class="flex flex-col items-center p-3 bg-gray-800/30 border border-gray-700 rounded-lg cursor-pointer hover:bg-gray-800/50 transition-colors">
                             <span class="text-xs font-medium text-gray-400 mb-2">Translate</span>
                             <input type="checkbox" id="translateToggle"
+                                onchange="saveToggleInstant('translate_enabled', this.checked)"
                                 class="w-4 h-4 rounded border-gray-600 bg-gray-700 text-orange-500 focus:ring-offset-gray-900 focus:ring-orange-500">
                         </label>
                         <label
@@ -263,13 +266,6 @@
                                 class="w-4 h-4 rounded border-gray-600 bg-gray-700 text-orange-500 focus:ring-offset-gray-900 focus:ring-orange-500">
                         </label>
                     </div>
-                </div>
-
-                <div class="pt-2 flex justify-end">
-                    <button onclick="saveSettings()" id="saveBtn"
-                        class="bg-white text-gray-900 hover:bg-gray-100 px-6 py-2 rounded-lg text-sm font-semibold shadow-lg shadow-white/5 transition-all active:scale-95 flex items-center gap-2">
-                        <span>Save Changes</span>
-                    </button>
                 </div>
             </section>
 
@@ -475,6 +471,35 @@
             const lang = document.getElementById('langSelect').value;
             await pywebview.api.save_language(lang);
             showToast('🌐 Language updated', 'info');
+        }
+
+        // Instant API key save
+        async function saveApiKeyInstant() {
+            const apiKey = document.getElementById('apiKey').value;
+            if (apiKey) {
+                await pywebview.api.save_api_key(apiKey);
+                showToast('🔑 API Key saved', 'success');
+            }
+        }
+
+        // Instant microphone save
+        async function saveMicInstant() {
+            const mic = document.getElementById('micSelect').value;
+            await pywebview.api.save_microphone(mic);
+            showToast('🎤 Microphone updated', 'info');
+        }
+
+        // Instant toggle save
+        async function saveToggleInstant(setting, value) {
+            await pywebview.api.save_toggle(setting, value);
+            showToast('⚙️ Settings updated', 'info');
+        }
+
+        // Clear all history
+        async function clearHistory() {
+            await pywebview.api.clear_history();
+            renderHistory([]);
+            showToast('🗑️ History cleared', 'info');
         }
 
         // Toast notification system

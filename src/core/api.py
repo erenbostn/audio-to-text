@@ -80,6 +80,31 @@ class Api:
         self._config.save_language(language)
         print(f"[API] Language set to: {language}")
 
+    def save_api_key(self, api_key: str) -> None:
+        """Save API key instantly."""
+        self._config.save_api_key(api_key)
+        print("[API] API key saved")
+
+    def save_microphone(self, device_index: str) -> None:
+        """Save microphone selection instantly."""
+        self._config.save_input_device(int(device_index))
+        print(f"[API] Microphone set to: {device_index}")
+
+    def save_toggle(self, setting: str, value: bool) -> None:
+        """Save a toggle setting instantly."""
+        if setting == "sound_enabled":
+            self._config.save_beep_setting(value)
+        elif setting == "auto_paste_enabled":
+            self._config.save_auto_paste_setting(value)
+        elif setting == "translate_enabled":
+            self._config.save_translate_setting(value)
+        print(f"[API] {setting} set to: {value}")
+
+    def clear_history(self) -> None:
+        """Clear all recording history."""
+        self._history.clear_all()
+        print("[API] History cleared")
+
     def get_microphones(self) -> List[Dict[str, Any]]:
         """Get list of available microphones."""
         try:
