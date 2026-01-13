@@ -195,9 +195,13 @@ class GroqWhisperApp:
                 time.sleep(0.1)  # Small delay for clipboard
                 pyautogui.hotkey('ctrl', 'v')
                 print("Text auto-pasted.")
+                self._show_toast("🚀 Text Pasted & Saved", "success")
+            else:
+                self._show_toast("✅ Copied to clipboard", "success")
             self._update_history_ui()
         else:
              print("Transcription failed.")
+             self._show_toast("❌ Transcription failed", "error")
 
     def process_file_transcription(self, filepath):
         """Handle file transcription (called from API)."""
@@ -236,9 +240,13 @@ class GroqWhisperApp:
                 time.sleep(0.1)  # Small delay for clipboard
                 pyautogui.hotkey('ctrl', 'v')
                 print("Text auto-pasted.")
+                self._show_toast("🚀 Text Pasted & Saved", "success")
+            else:
+                self._show_toast("✅ Copied to clipboard", "success")
             self._update_history_ui()
         else:
             print("File transcription failed.")
+            self._show_toast("❌ Transcription failed", "error")
 
     def _update_ui_recording_state(self, is_recording):
         """Notify JS about state."""
@@ -248,6 +256,17 @@ class GroqWhisperApp:
                 self.dashboard_window.evaluate_js(code)
             except Exception as e:
                 print(f"Warning: Could not update dashboard UI state: {e}")
+
+    def _show_toast(self, message: str, toast_type: str = "success"):
+        """Show toast notification in UI."""
+        if self.dashboard_window:
+            try:
+                # Escape quotes in message
+                safe_message = message.replace("'", "\\'")
+                code = f"showToast('{safe_message}', '{toast_type}')"
+                self.dashboard_window.evaluate_js(code)
+            except Exception as e:
+                print(f"Warning: Could not show toast: {e}")
 
     def _update_history_ui(self):
         """Push history update to UI."""

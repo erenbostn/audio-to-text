@@ -75,6 +75,11 @@ class Api:
         if self._app.dashboard_window:
             self._app.dashboard_window.on_top = enabled
 
+    def save_language(self, language: str) -> None:
+        """Save language setting instantly (without full config save)."""
+        self._config.save_language(language)
+        print(f"[API] Language set to: {language}")
+
     def get_microphones(self) -> List[Dict[str, Any]]:
         """Get list of available microphones."""
         try:

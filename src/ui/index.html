@@ -78,10 +78,40 @@
                 transform: rotate(360deg);
             }
         }
+
+        /* Toast notifications */
+        .toast {
+            animation: slideIn 0.3s ease, fadeOut 0.3s ease 2.7s forwards;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadeOut {
+            from {
+                opacity: 1;
+            }
+
+            to {
+                opacity: 0;
+            }
+        }
     </style>
 </head>
 
 <body class="bg-transparent overflow-hidden h-screen w-screen text-gray-200 select-none">
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="fixed top-4 right-4 z-50 space-y-2"></div>
 
     <!-- DASHBOARD VIEW -->
     <div id="dashboard" class="hidden h-full flex flex-col bg-gray-900">
@@ -186,7 +216,7 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-400 mb-1.5">Transcription Language</label>
                         <div class="relative">
-                            <select id="langSelect"
+                            <select id="langSelect" onchange="saveLanguageInstant()"
                                 class="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all outline-none appearance-none cursor-pointer">
                                 <option value="tr">Turkish - Türkçe</option>
                                 <option value="en">English</option>
@@ -441,6 +471,36 @@
                 }, 2000);
             }, 500);
         }
+
+        // Instant language save (no need to click Save)
+        async function saveLanguageInstant() {
+            const lang = document.getElementById('langSelect').value;
+            await pywebview.api.save_language(lang);
+            showToast('🌐 Language updated', 'info');
+        }
+
+        // Toast notification system
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+
+            const bgColor = type === 'success' ? 'bg-green-600' :
+                type === 'info' ? 'bg-blue-600' :
+                    type === 'error' ? 'bg-red-600' : 'bg-gray-700';
+
+            toast.className = `toast ${bgColor} text-white px-4 py-2 rounded-lg shadow-lg text-sm font-medium`;
+            toast.textContent = message;
+
+            container.appendChild(toast);
+
+            // Remove after animation
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        // Expose showToast to window for Python access
+        window.showToast = showToast;
 
         function toggleVisibility(id) {
             const el = document.getElementById(id);
