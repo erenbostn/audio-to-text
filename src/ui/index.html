@@ -655,15 +655,15 @@
             document.getElementById('selectAllCheckbox').classList.remove('hidden');
 
             container.innerHTML = historyItems.map((item, index) => `
-                <div class="bg-gray-800/40 border border-gray-700/50 rounded-lg p-3 hover:border-gray-600 transition-colors group relative" data-id="${item.id}">
+                <div class="bg-gray-800/40 border border-gray-700/50 rounded-lg p-3 hover:border-gray-600 transition-colors group" data-id="${item.id}">
                     <div class="flex items-start gap-3">
                         <input type="checkbox" class="item-checkbox w-4 h-4 mt-1 rounded border-gray-600 bg-gray-700 text-orange-500 focus:ring-offset-gray-900 focus:ring-orange-500"
                             data-id="${item.id}" onchange="updateSelection()">
-                        <div class="order-badge hidden absolute top-2 right-2 w-6 h-6 bg-orange-600 text-white text-xs font-bold rounded-full flex items-center justify-center"></div>
                         <div class="flex-1">
                             <div class="flex justify-between items-start mb-2">
                                 <div class="text-xs text-gray-500 font-mono">${item.timestamp}</div>
-                                <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div class="flex gap-2 items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <div class="order-badge hidden w-5 h-5 bg-orange-600 text-white text-xs font-bold rounded-full flex items-center justify-center"></div>
                                     <button onclick="copyText('${item.id}')" class="text-xs text-blue-400 hover:text-blue-300">Copy</button>
                                 </div>
                             </div>
@@ -849,9 +849,11 @@
             // Get current text from textareas (in case edited)
             const texts = selectedItems.map(item => {
                 const textarea = document.getElementById(`text-${item.id}`);
-                return textarea ? textarea.value : item.text;
+                const text = textarea ? textarea.value : item.text;
+                return text.trim();  // Trim leading/trailing whitespace
             });
 
+            // Join with single space (no leading space on first item)
             const mergedText = texts.join(' ');
 
             // Create new history entry with merged text via API
