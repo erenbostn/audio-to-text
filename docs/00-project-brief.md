@@ -204,6 +204,17 @@
     - Auto-Copy is enabled by default (stored as AUTO_COPY in .env)
     - When enabled, both injects text AND copies to clipboard after transcription
 
+- [2026-01-13] 4-Column Toggle Grid with New Features
+  - What changed: Replaced 2-column toggle grid with 4-column layout, added 3 new features
+  - Affected area: src/config.py, src/core/api.py, src/core/transcriber.py, src/main.py, src/ui/index.html
+  - Notes:
+    - Sound Feedback: beep on start/stop recording (existing)
+    - Auto-Paste: simulate Ctrl+V after copying to clipboard (new, default: true)
+    - Always on Top: keep dashboard window above other windows (new, default: false)
+    - Translate to English: use Whisper translations API (new, default: false)
+    - Removed old Auto-Copy toggle, text is now always copied to clipboard
+    - Added pyautogui for Ctrl+V simulation
+
 ---
 
 ## KNOWN ISSUES / UNKNOWNS (AI-maintained)

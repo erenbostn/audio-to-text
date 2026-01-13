@@ -20,7 +20,9 @@ class Api:
             "api_key": self._config.get_api_key(),
             "input_device_index": self._config.get_input_device(),
             "sound_enabled": self._config.play_beep(),
-            "auto_copy_enabled": self._config.auto_copy_enabled(),
+            "auto_paste_enabled": self._config.auto_paste_enabled(),
+            "always_on_top": self._config.always_on_top(),
+            "translate_enabled": self._config.translate_enabled(),
             "language": self._config.get_language()
         }
 
@@ -36,9 +38,19 @@ class Api:
         if "sound_enabled" in config:
             self._config.save_beep_setting(config["sound_enabled"])
             
-        # Save Auto-Copy Setting
-        if "auto_copy_enabled" in config:
-            self._config.save_auto_copy_setting(config["auto_copy_enabled"])
+        # Save Auto-Paste Setting
+        if "auto_paste_enabled" in config:
+            self._config.save_auto_paste_setting(config["auto_paste_enabled"])
+            
+        # Save Always on Top Setting
+        if "always_on_top" in config:
+            self._config.save_always_on_top_setting(config["always_on_top"])
+            # Apply immediately
+            self.set_always_on_top(config["always_on_top"])
+            
+        # Save Translate Setting
+        if "translate_enabled" in config:
+            self._config.save_translate_setting(config["translate_enabled"])
             
         # Save Language
         if "language" in config:
@@ -57,6 +69,11 @@ class Api:
         
         # Notify app to reload/apply
         self._app.reload_config()
+
+    def set_always_on_top(self, enabled: bool) -> None:
+        """Set window always-on-top state."""
+        if self._app.dashboard_window:
+            self._app.dashboard_window.on_top = enabled
 
     def get_microphones(self) -> List[Dict[str, Any]]:
         """Get list of available microphones."""

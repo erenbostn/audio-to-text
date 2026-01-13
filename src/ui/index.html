@@ -206,18 +206,30 @@
                         </div>
                     </div>
 
-                    <!-- Toggles Grid -->
-                    <div class="grid grid-cols-2 gap-4">
+                    <!-- Toggles Grid (4 columns) -->
+                    <div class="grid grid-cols-4 gap-2">
                         <label
-                            class="flex items-center justify-between p-3 bg-gray-800/30 border border-gray-700 rounded-lg cursor-pointer hover:bg-gray-800/50 transition-colors">
-                            <span class="text-sm font-medium text-gray-300">Sound Feedback</span>
+                            class="flex flex-col items-center p-3 bg-gray-800/30 border border-gray-700 rounded-lg cursor-pointer hover:bg-gray-800/50 transition-colors">
+                            <span class="text-xs font-medium text-gray-400 mb-2">Sound</span>
                             <input type="checkbox" id="soundToggle"
                                 class="w-4 h-4 rounded border-gray-600 bg-gray-700 text-orange-500 focus:ring-offset-gray-900 focus:ring-orange-500">
                         </label>
                         <label
-                            class="flex items-center justify-between p-3 bg-gray-800/30 border border-gray-700 rounded-lg cursor-pointer hover:bg-gray-800/50 transition-colors">
-                            <span class="text-sm font-medium text-gray-300">Auto-Copy</span>
-                            <input type="checkbox" id="autoCopyToggle"
+                            class="flex flex-col items-center p-3 bg-gray-800/30 border border-gray-700 rounded-lg cursor-pointer hover:bg-gray-800/50 transition-colors">
+                            <span class="text-xs font-medium text-gray-400 mb-2">Auto-Paste</span>
+                            <input type="checkbox" id="autoPasteToggle"
+                                class="w-4 h-4 rounded border-gray-600 bg-gray-700 text-orange-500 focus:ring-offset-gray-900 focus:ring-orange-500">
+                        </label>
+                        <label
+                            class="flex flex-col items-center p-3 bg-gray-800/30 border border-gray-700 rounded-lg cursor-pointer hover:bg-gray-800/50 transition-colors">
+                            <span class="text-xs font-medium text-gray-400 mb-2">On Top</span>
+                            <input type="checkbox" id="alwaysOnTopToggle"
+                                class="w-4 h-4 rounded border-gray-600 bg-gray-700 text-orange-500 focus:ring-offset-gray-900 focus:ring-orange-500">
+                        </label>
+                        <label
+                            class="flex flex-col items-center p-3 bg-gray-800/30 border border-gray-700 rounded-lg cursor-pointer hover:bg-gray-800/50 transition-colors">
+                            <span class="text-xs font-medium text-gray-400 mb-2">Translate</span>
+                            <input type="checkbox" id="translateToggle"
                                 class="w-4 h-4 rounded border-gray-600 bg-gray-700 text-orange-500 focus:ring-offset-gray-900 focus:ring-orange-500">
                         </label>
                     </div>
@@ -371,7 +383,9 @@
             if (!config) return;
             document.getElementById('apiKey').value = config.api_key || '';
             document.getElementById('soundToggle').checked = config.sound_enabled !== false;
-            document.getElementById('autoCopyToggle').checked = config.auto_copy_enabled !== false;
+            document.getElementById('autoPasteToggle').checked = config.auto_paste_enabled !== false;
+            document.getElementById('alwaysOnTopToggle').checked = config.always_on_top === true;
+            document.getElementById('translateToggle').checked = config.translate_enabled === true;
             if (config.language) {
                 document.getElementById('langSelect').value = config.language;
             }
@@ -406,7 +420,9 @@
                 api_key: document.getElementById('apiKey').value,
                 input_device_index: document.getElementById('micSelect').value,
                 sound_enabled: document.getElementById('soundToggle').checked,
-                auto_copy_enabled: document.getElementById('autoCopyToggle').checked,
+                auto_paste_enabled: document.getElementById('autoPasteToggle').checked,
+                always_on_top: document.getElementById('alwaysOnTopToggle').checked,
+                translate_enabled: document.getElementById('translateToggle').checked,
                 language: document.getElementById('langSelect').value
             };
 

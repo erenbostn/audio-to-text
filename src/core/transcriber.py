@@ -81,16 +81,17 @@ class GroqTranscriber:
 
         return True
 
-    def transcribe(self, audio_file_path: str, language: Optional[str] = "tr") -> Optional[str]:
+    def transcribe(self, audio_file_path: str, language: Optional[str] = "tr", translate: bool = False) -> Optional[str]:
         """
         Transcribe an audio file using Groq's Whisper API.
 
         Args:
             audio_file_path: Path to the audio file (.wav, .mp3, etc.)
             language: Language code (default: "tr" for Turkish)
+            translate: If True, translate to English instead of transcribing
 
         Returns:
-            Transcribed text as string, or None if transcription failed
+            Transcribed/translated text as string, or None if failed
         """
         # Validate file exists
         if not Path(audio_file_path).exists():
@@ -104,7 +105,7 @@ class GroqTranscriber:
         # Try transcription with retry logic
         for attempt in range(self.MAX_RETRIES):
             try:
-                result = self._transcribe_once(audio_file_path, language)
+                result = self._transcribe_once(audio_file_path, language, translate)
                 return result
 
             except Exception as e:
@@ -126,16 +127,17 @@ class GroqTranscriber:
 
         return None
 
-    def _transcribe_once(self, audio_file_path: str, language: Optional[str] = "tr") -> str:
+    def _transcribe_once(self, audio_file_path: str, language: Optional[str] = "tr", translate: bool = False) -> str:
         """
-        Perform a single transcription attempt.
+        Perform a single transcription/translation attempt.
 
         Args:
             audio_file_path: Path to the audio file
             language: Language code for transcription
+            translate: If True, translate to English
 
         Returns:
-            Transcribed text
+            Transcribed or translated text
 
         Raises:
             Exception: If API call fails
@@ -162,14 +164,18 @@ class GroqTranscriber:
                 "response_format": "text"
             }
 
-            # Only include language parameter if not None (auto-detect)
-            if language is not None:
-                api_params["language"] = language
+            # Use translations API if translate is True, otherwise transcriptions
+            if translate:
+                # Translations API converts to English (doesn't accept language param)
+                result = self.client.audio.translations.create(**api_params)
+            else:
+                # Transcriptions API returns verbatim text
+                # Only include language parameter if not None (auto-detect)
+                if language is not None:
+                    api_params["language"] = language
+                result = self.client.audio.transcriptions.create(**api_params)
 
-            # Call Groq API
-            transcription = self.client.audio.transcriptions.create(**api_params)
-
-        return transcription
+        return result
 
     def transcribe_with_language(self, audio_file_path: str, language: str = "tr") -> Optional[str]:
         """

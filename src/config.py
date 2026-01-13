@@ -119,6 +119,36 @@ class Config:
         self._save_env_value("AUTO_COPY", value)
         os.environ["AUTO_COPY"] = value
 
+    def auto_paste_enabled(self) -> bool:
+        """Get auto-paste (Ctrl+V after copy) preference."""
+        return os.getenv("AUTO_PASTE", "true").lower() == "true"
+
+    def save_auto_paste_setting(self, enabled: bool) -> None:
+        """Save auto-paste setting to .env and update os.environ."""
+        value = "true" if enabled else "false"
+        self._save_env_value("AUTO_PASTE", value)
+        os.environ["AUTO_PASTE"] = value
+
+    def always_on_top(self) -> bool:
+        """Get always-on-top window preference."""
+        return os.getenv("ALWAYS_ON_TOP", "false").lower() == "true"
+
+    def save_always_on_top_setting(self, enabled: bool) -> None:
+        """Save always-on-top setting to .env and update os.environ."""
+        value = "true" if enabled else "false"
+        self._save_env_value("ALWAYS_ON_TOP", value)
+        os.environ["ALWAYS_ON_TOP"] = value
+
+    def translate_enabled(self) -> bool:
+        """Get translate to English preference."""
+        return os.getenv("TRANSLATE_TO_EN", "false").lower() == "true"
+
+    def save_translate_setting(self, enabled: bool) -> None:
+        """Save translate setting to .env and update os.environ."""
+        value = "true" if enabled else "false"
+        self._save_env_value("TRANSLATE_TO_EN", value)
+        os.environ["TRANSLATE_TO_EN"] = value
+
     def _save_env_value(self, key: str, value: str) -> None:
         """
         Save a key-value pair to .env file.

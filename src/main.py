@@ -10,6 +10,7 @@ import signal
 import os
 import threading
 import pyperclip
+import pyautogui
 import time
 from pathlib import Path
 
@@ -89,7 +90,7 @@ class GroqWhisperApp:
             height=850,
             resizable=True,
             js_api=self.api,
-            on_top=False,
+            on_top=self.config.always_on_top(),
             confirm_close=True
         )
         # Hook into closing event to minimize instead of quit
@@ -178,16 +179,22 @@ class GroqWhisperApp:
         lang = self.config.get_language()
         if lang == "auto":
             lang = None
+        
+        # Check if translate to English is enabled
+        translate = self.config.translate_enabled()
             
-        text = self.transcriber.transcribe(recording.filepath, language=lang)
+        text = self.transcriber.transcribe(recording.filepath, language=lang, translate=translate)
         
         if text:
             self.history.update_transcript(recording_id, text)
-            self.injector.inject_text(text)
-            # Auto-copy to clipboard if enabled
-            if self.config.auto_copy_enabled():
-                pyperclip.copy(text)
-                print("Text copied to clipboard.")
+            # Always copy to clipboard
+            pyperclip.copy(text)
+            print("Text copied to clipboard.")
+            # Auto-paste if enabled (simulate Ctrl+V)
+            if self.config.auto_paste_enabled():
+                time.sleep(0.1)  # Small delay for clipboard
+                pyautogui.hotkey('ctrl', 'v')
+                print("Text auto-pasted.")
             self._update_history_ui()
         else:
              print("Transcription failed.")
@@ -213,16 +220,22 @@ class GroqWhisperApp:
         lang = self.config.get_language()
         if lang == "auto":
             lang = None
+        
+        # Check if translate to English is enabled
+        translate = self.config.translate_enabled()
             
-        text = self.transcriber.transcribe(filepath, language=lang)
+        text = self.transcriber.transcribe(filepath, language=lang, translate=translate)
         
         if text:
             self.history.update_transcript(recording_id, text)
-            self.injector.inject_text(text)
-            # Auto-copy to clipboard if enabled
-            if self.config.auto_copy_enabled():
-                pyperclip.copy(text)
-                print("Text copied to clipboard.")
+            # Always copy to clipboard
+            pyperclip.copy(text)
+            print("Text copied to clipboard.")
+            # Auto-paste if enabled (simulate Ctrl+V)
+            if self.config.auto_paste_enabled():
+                time.sleep(0.1)  # Small delay for clipboard
+                pyautogui.hotkey('ctrl', 'v')
+                print("Text auto-pasted.")
             self._update_history_ui()
         else:
             print("File transcription failed.")
