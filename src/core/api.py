@@ -294,3 +294,42 @@ class Api:
         """
         # Run in thread to avoid blocking
         threading.Thread(target=self._app.process_split_transcription_workflow, args=(filepath,), daemon=True).start()
+
+    def save_transcript_to_file(self, text: str, default_filename: str) -> bool:
+        """
+        Open file dialog to save transcript text.
+
+        Args:
+            text: The transcript text to save
+            default_filename: Suggested filename (e.g., transcript_2026-01-14.txt)
+
+        Returns:
+            True if file was saved, False if user cancelled
+        """
+        import tkinter as tk
+        from tkinter import filedialog
+
+        try:
+            root = tk.Tk()
+            root.withdraw()
+            root.attributes('-topmost', True)
+
+            file_path = filedialog.asksaveasfilename(
+                title="Transcripti Kaydet",
+                defaultextension=".txt",
+                initialfile=default_filename,
+                filetypes=[("Metin Dosyaları", "*.txt"), ("Tüm Dosyalar", "*.*")]
+            )
+
+            root.destroy()
+
+            if file_path:
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(text)
+                print(f"[API] Saved transcript to: {file_path}")
+                return True
+            return False
+
+        except Exception as e:
+            print(f"[API] Error saving transcript: {e}")
+            return False
