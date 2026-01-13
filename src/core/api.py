@@ -217,9 +217,80 @@ class Api:
     def transcribe_file(self, filepath: str) -> None:
         """
         Transcribe a selected file.
-        
+
         Args:
             filepath: Absolute path to the file.
         """
         # Run in thread
         threading.Thread(target=self._app.process_file_transcription, args=(filepath,), daemon=True).start()
+
+    # === Audio Splitting Endpoints ===
+
+    def check_file_duration(self, filepath: str) -> Dict[str, Any]:
+        """
+        Check audio file duration to determine if splitting is needed.
+
+        Args:
+            filepath: Path to the audio file
+
+        Returns:
+            Dict with duration info and should_split flag
+        """
+        from core.transcriber import GroqTranscriber
+
+        transcriber = GroqTranscriber(self._config.get_api_key())
+        duration_seconds = transcriber.get_audio_duration(filepath)
+
+        return {
+            "duration_seconds": duration_seconds,
+            "duration_minutes": duration_seconds / 60,
+            "should_split": duration_seconds > 600,
+            "threshold_seconds": 600
+        }
+
+    def split_audio_file(self, filepath: str, recording_id: str) -> Dict[str, Any]:
+        """
+        Split audio file into chunks.
+
+        Args:
+            filepath: Path to the audio file
+            recording_id: Original recording ID for naming
+
+        Returns:
+            Job metadata with chunk information
+        """
+        from core.audio_splitter import AudioSplitter
+
+        splitter = AudioSplitter(temp_dir="temp")
+        job_metadata = splitter.split(filepath, recording_id)
+
+        return job_metadata
+
+    def transcribe_chunk(self, chunk_path: str, language: str = "tr", translate: bool = False) -> str | None:
+        """
+        Transcribe a single chunk.
+
+        Args:
+            chunk_path: Path to the chunk file
+            language: Language code for transcription
+            translate: If True, translate to English
+
+        Returns:
+            Transcribed text or None if failed
+        """
+        from core.transcriber import GroqTranscriber
+
+        transcriber = GroqTranscriber(self._config.get_api_key())
+        result = transcriber.transcribe(chunk_path, language, translate)
+
+        return result
+
+    def start_split_workflow(self, filepath: str) -> None:
+        """
+        Start the split and transcription workflow for a long audio file.
+
+        Args:
+            filepath: Path to the audio file to split and transcribe
+        """
+        # Run in thread to avoid blocking
+        threading.Thread(target=self._app.process_split_transcription_workflow, args=(filepath,), daemon=True).start()

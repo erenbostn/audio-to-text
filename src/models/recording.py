@@ -27,6 +27,10 @@ class Recording:
         transcribed: Whether transcription is complete.
         transcript: Transcribed text (None if not transcribed).
         source: Whether this is from recording or file upload.
+        is_split: True if this recording is a chunk from a split file.
+        chunk_job_id: ID of the split job (original recording ID).
+        chunk_part: Part number if this is a chunk (1, 2, 3...).
+        parent_recording_id: Parent ID if this is a chunk.
     """
     id: str
     filepath: str
@@ -34,6 +38,12 @@ class Recording:
     transcribed: bool = False
     transcript: str | None = None
     source: SourceType = SourceType.RECORDING  # Default to RECORDING for backward compatibility
+
+    # Chunk metadata (for split files)
+    is_split: bool = False  # True if this recording is a chunk from a split file
+    chunk_job_id: str | None = None  # ID of the split job (original recording ID)
+    chunk_part: int | None = None  # Part number if this is a chunk (1, 2, 3...)
+    parent_recording_id: str | None = None  # Parent ID if this is a chunk
 
     @property
     def filename(self) -> str:

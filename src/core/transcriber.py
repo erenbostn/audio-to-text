@@ -81,6 +81,22 @@ class GroqTranscriber:
 
         return True
 
+    def get_audio_duration(self, filepath: str) -> float:
+        """
+        Get audio file duration in seconds.
+
+        Args:
+            filepath: Path to the audio file
+
+        Returns:
+            Duration in seconds
+        """
+        import soundfile as sf
+        with sf.SoundFile(filepath) as audio_file:
+            frames = len(audio_file)
+            samplerate = audio_file.samplerate
+            return frames / samplerate
+
     def transcribe(self, audio_file_path: str, language: Optional[str] = "tr", translate: bool = False) -> Optional[str]:
         """
         Transcribe an audio file using Groq's Whisper API.

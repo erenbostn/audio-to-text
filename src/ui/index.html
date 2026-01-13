@@ -137,6 +137,57 @@
     <!-- Toast Container -->
     <div id="toastContainer" class="fixed top-4 right-4 z-50 space-y-2"></div>
 
+    <!-- Split Confirmation Modal -->
+    <div id="splitModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+        <div class="bg-gray-800 border border-gray-700 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-10 h-10 bg-orange-500/20 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"/>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold text-white">Uzun Ses Dosyası Tespit Edildi</h3>
+                    <p id="splitModalDuration" class="text-sm text-gray-400"></p>
+                </div>
+            </div>
+
+            <div class="bg-gray-900/50 rounded-lg p-4 mb-4">
+                <p class="text-sm text-gray-300 mb-3">Bu dosya <span class="text-orange-400 font-semibold">10 dakikadan uzun</span>. Otomatik olarak parçalara bölünsün mü?</p>
+                <ul class="text-xs text-gray-400 space-y-1">
+                    <li>• Her parça: 10 dakika</li>
+                    <li>• Overlap: 10 saniye (bağlam koruması)</li>
+                    <li>• Transcribe: Otomatik sıralı</li>
+                    <li>• Merge: Manuel (seçip birleştirin)</li>
+                </ul>
+            </div>
+
+            <div class="flex gap-3">
+                <button onclick="cancelSplit()" class="flex-1 px-4 py-2.5 bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium rounded-lg transition-colors">
+                    İptal
+                </button>
+                <button onclick="confirmSplit()" class="flex-1 px-4 py-2.5 bg-orange-600 hover:bg-orange-500 text-white text-sm font-medium rounded-lg transition-colors">
+                    Parçala ve Transcribe Et
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Split Progress Modal -->
+    <div id="splitProgressModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+        <div class="bg-gray-800 border border-gray-700 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
+            <h3 class="text-lg font-semibold text-white mb-4">Parçalar Transcribe Ediliyor</h3>
+
+            <div id="chunkProgressContainer" class="space-y-3 max-h-64 overflow-y-auto">
+                <!-- Chunk items will be dynamically added here -->
+            </div>
+
+            <div class="mt-4 pt-4 border-t border-gray-700">
+                <p id="splitProgressText" class="text-sm text-gray-400">Hazırlanıyor...</p>
+            </div>
+        </div>
+    </div>
+
     <!-- DASHBOARD VIEW -->
     <div id="dashboard" class="hidden h-full flex flex-col bg-gray-900">
         <!-- Header -->
@@ -179,7 +230,7 @@
                     <div id="recordPulse" class="absolute inset-0 bg-red-500/10 opacity-0 transition-opacity"></div>
                 </button>
 
-                <button onclick="uploadFile()"
+                <button onclick="uploadFileWithSplitCheck()"
                     class="flex flex-col items-center justify-center p-4 bg-gray-800/50 border border-gray-700 rounded-xl hover:bg-gray-800 transition-all active:scale-95 group">
                     <div
                         class="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center mb-2 group-hover:bg-blue-500/20 transition-colors">
@@ -667,11 +718,39 @@
                                     <button onclick="copyText('${item.id}')" class="text-xs text-blue-400 hover:text-blue-300">Copy</button>
                                 </div>
                             </div>
-                            <textarea id="text-${item.id}"
-                                class="w-full bg-transparent text-sm text-gray-200 leading-relaxed font-light resize-none outline-none ${isEditable ? 'border border-gray-600 rounded p-1' : ''}"
-                                rows="2"
-                                ${isEditable ? '' : 'readonly'}
-                                onblur="updateHistoryText('${item.id}', this.value)">${item.text}</textarea>
+                            <div class="relative">
+                                ${item.text && item.text.split(' ').length >= 100 ? `
+                                    <!-- Collapsed state for long texts -->
+                                    <div id="collapsed-${item.id}"
+                                         class="cursor-pointer"
+                                         onclick="toggleExpand('${item.id}')">
+                                        <div class="text-sm text-gray-200 leading-relaxed font-light overflow-hidden max-h-16 relative">
+                                            ${item.text.substring(0, 300)}...
+                                            <div class="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-gray-800/40 to-transparent"></div>
+                                        </div>
+                                        <div class="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                            </svg>
+                                            <span>Devamını görmek için tıklayın (${Math.ceil(item.text.split(' ').length)} kelime)</span>
+                                        </div>
+                                    </div>
+                                    <!-- Expanded state (hidden by default) -->
+                                    <textarea id="text-${item.id}"
+                                        class="hidden w-full bg-transparent text-sm text-gray-200 leading-relaxed font-light resize-none outline-none ${isEditable ? 'border border-gray-600 rounded p-1' : ''}"
+                                        rows="8"
+                                        ${isEditable ? '' : 'readonly'}
+                                        onclick="toggleExpand('${item.id}')"
+                                        onblur="updateHistoryText('${item.id}', this.value)">${item.text}</textarea>
+                                ` : `
+                                    <!-- Short text: always expanded -->
+                                    <textarea id="text-${item.id}"
+                                        class="w-full bg-transparent text-sm text-gray-200 leading-relaxed font-light resize-none outline-none ${isEditable ? 'border border-gray-600 rounded p-1' : ''}"
+                                        rows="2"
+                                        ${isEditable ? '' : 'readonly'}
+                                        onblur="updateHistoryText('${item.id}', this.value)">${item.text}</textarea>
+                                `}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -695,6 +774,34 @@
                     ta.classList.remove('border', 'border-gray-600', 'rounded', 'p-1');
                 }
             });
+
+            // Auto-expand collapsed texts when editing
+            if (isEditable) {
+                document.querySelectorAll('[id^="collapsed-"]').forEach(el => {
+                    const id = el.id.replace('collapsed-', '');
+                    toggleExpand(id);
+                });
+            }
+        }
+
+        // Toggle expand/collapse for long texts
+        function toggleExpand(id) {
+            const collapsed = document.getElementById(`collapsed-${id}`);
+            const textarea = document.getElementById(`text-${id}`);
+
+            if (collapsed && textarea) {
+                const isCollapsed = !collapsed.classList.contains('hidden');
+
+                if (isCollapsed) {
+                    // Expand
+                    collapsed.classList.add('hidden');
+                    textarea.classList.remove('hidden');
+                } else {
+                    // Collapse
+                    collapsed.classList.remove('hidden');
+                    textarea.classList.add('hidden');
+                }
+            }
         }
 
         // Toggle Lock Button state (visual + logic)
@@ -898,6 +1005,99 @@
                 await pywebview.api.transcribe_file(path);
             }
         }
+
+        // === Split & Transcribe Workflow ===
+
+        let pendingFileForSplit = null;
+
+        async function uploadFileWithSplitCheck() {
+            const filepath = await pywebview.api.select_file();
+
+            if (!filepath) return;
+
+            // Check duration
+            const durationCheck = await pywebview.api.check_file_duration(filepath);
+
+            if (durationCheck.should_split) {
+                // Show split confirmation modal
+                pendingFileForSplit = filepath;
+                document.getElementById('splitModalDuration').textContent =
+                    `Süre: ${durationCheck.duration_minutes.toFixed(1)} dakika`;
+                document.getElementById('splitModal').classList.remove('hidden');
+            } else {
+                // Normal transcription
+                await pywebview.api.transcribe_file(filepath);
+            }
+        }
+
+        function cancelSplit() {
+            pendingFileForSplit = null;
+            document.getElementById('splitModal').classList.add('hidden');
+        }
+
+        async function confirmSplit() {
+            if (!pendingFileForSplit) return;
+
+            // Hide confirmation, show progress
+            document.getElementById('splitModal').classList.add('hidden');
+            document.getElementById('splitProgressModal').classList.remove('hidden');
+
+            try {
+                // Start split transcription workflow
+                await pywebview.api.start_split_workflow(pendingFileForSplit);
+            } catch (error) {
+                showToast('❌ Hata: ' + error.message, 'error');
+                document.getElementById('splitProgressModal').classList.add('hidden');
+            }
+
+            pendingFileForSplit = null;
+        }
+
+        // Called from Python during transcription
+        window.showSplitProgress = function(current, total, chunkId) {
+            const container = document.getElementById('chunkProgressContainer');
+
+            // Add chunk item if not exists
+            if (!document.getElementById(`chunk-${chunkId}`)) {
+                const chunkHtml = `
+                    <div id="chunk-${chunkId}" class="flex items-center gap-3 bg-gray-900/50 rounded-lg p-3">
+                        <div class="w-6 h-6 bg-gray-700 rounded-full flex items-center justify-center">
+                            <span class="text-xs text-gray-400">${current}</span>
+                        </div>
+                        <div class="flex-1">
+                            <div class="h-2 bg-gray-700 rounded-full overflow-hidden">
+                                <div class="chunk-progress h-full bg-orange-500 transition-all duration-300" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <span class="chunk-status text-xs text-gray-400">Hazır</span>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', chunkHtml);
+            }
+
+            // Update overall progress
+            document.getElementById('splitProgressText').textContent =
+                `Parça ${current}/${total} transcribe ediliyor...`;
+        };
+
+        window.updateChunkComplete = function(chunkId) {
+            const chunkEl = document.getElementById(`chunk-${chunkId}`);
+            if (chunkEl) {
+                const progress = chunkEl.querySelector('.chunk-progress');
+                const status = chunkEl.querySelector('.chunk-status');
+                progress.style.width = '100%';
+                progress.classList.remove('bg-orange-500');
+                progress.classList.add('bg-green-500');
+                status.textContent = '✓ Tamamlandı';
+                status.classList.remove('text-gray-400');
+                status.classList.add('text-green-400');
+            }
+        };
+
+        window.hideSplitProgress = function() {
+            document.getElementById('splitProgressModal').classList.add('hidden');
+            document.getElementById('chunkProgressContainer').innerHTML = '';
+        };
 
         async function toggleRecord() {
             await pywebview.api.toggle_recording();

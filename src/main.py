@@ -187,17 +187,15 @@ class GroqWhisperApp:
         
         if text:
             self.history.update_transcript(recording_id, text)
-            # Always copy to clipboard
-            pyperclip.copy(text)
-            print("Text copied to clipboard.")
             # Auto-paste if enabled (simulate Ctrl+V)
             if self.config.auto_paste_enabled():
+                pyperclip.copy(text)
                 time.sleep(0.1)  # Small delay for clipboard
                 pyautogui.hotkey('ctrl', 'v')
                 print("Text auto-pasted.")
                 self._show_toast("🚀 Text Pasted & Saved", "success")
             else:
-                self._show_toast("✅ Copied to clipboard", "success")
+                self._show_toast("✅ Transcription completed", "success")
             self._update_history_ui()
         else:
              print("Transcription failed.")
@@ -232,21 +230,117 @@ class GroqWhisperApp:
         
         if text:
             self.history.update_transcript(recording_id, text)
-            # Always copy to clipboard
-            pyperclip.copy(text)
-            print("Text copied to clipboard.")
             # Auto-paste if enabled (simulate Ctrl+V)
             if self.config.auto_paste_enabled():
+                pyperclip.copy(text)
                 time.sleep(0.1)  # Small delay for clipboard
                 pyautogui.hotkey('ctrl', 'v')
                 print("Text auto-pasted.")
                 self._show_toast("🚀 Text Pasted & Saved", "success")
             else:
-                self._show_toast("✅ Copied to clipboard", "success")
+                self._show_toast("✅ Transcription completed", "success")
             self._update_history_ui()
         else:
             print("File transcription failed.")
             self._show_toast("❌ Transcription failed", "error")
+
+    def process_split_transcription_workflow(self, filepath: str):
+        """
+        Split audio file and transcribe chunks sequentially.
+
+        Workflow:
+        1. Split file into chunks
+        2. Create history entries for each chunk
+        3. Transcribe chunks sequentially (1 → N)
+        4. User manually merges using existing merge button
+        """
+        from models.recording import SourceType
+
+        # Generate recording ID for the split job
+        import time
+        recording_id = str(int(time.time() * 1000))
+
+        print(f"[SPLIT] Starting split workflow for: {filepath}")
+
+        # Split file into chunks
+        try:
+            job_metadata = self.api.split_audio_file(filepath, recording_id)
+            print(f"[SPLIT] Created {job_metadata['total_parts']} chunks")
+        except Exception as e:
+            print(f"[SPLIT] Error splitting file: {e}")
+            self._show_toast("❌ Dosya parçalanamadı", "error")
+            return
+
+        # Create history entries for chunks
+        chunk_recordings = []
+        for chunk_info in job_metadata["chunks"]:
+            chunk_path = f"temp/{chunk_info['filename']}"
+
+            # Create recording for chunk
+            chunk_recording_id = self.history.add_recording(
+                filepath=chunk_path,
+                source=SourceType.FILE
+            )
+
+            # Get the recording and update metadata
+            recording = self.history.get_recording(chunk_recording_id)
+            if recording:
+                recording.is_split = True
+                recording.chunk_part = chunk_info['part']
+                recording.parent_recording_id = recording_id
+
+            chunk_recordings.append({
+                "id": chunk_recording_id,
+                "part": chunk_info['part'],
+                "path": chunk_path
+            })
+
+        # Update UI with new chunk recordings
+        self._update_history_ui()
+
+        # Sequential transcription
+        lang = self.config.get_language()
+        if lang == "auto":
+            lang = None
+        translate = self.config.translate_enabled()
+
+        for i, chunk in enumerate(chunk_recordings):
+            print(f"[SPLIT] Transcribing chunk {i+1}/{len(chunk_recordings)}")
+
+            # Update UI progress
+            self._evaluate_js(f"""
+                if (typeof showSplitProgress === 'function') {{
+                    showSplitProgress({i+1}, {len(chunk_recordings)}, "{chunk['id']}");
+                }}
+            """)
+
+            # Transcribe
+            text = self.transcriber.transcribe(chunk['path'], language=lang, translate=translate)
+
+            if text:
+                self.history.update_transcript(chunk['id'], text)
+
+            # Update UI
+            self._evaluate_js(f"""
+                if (typeof updateChunkComplete === 'function') {{
+                    updateChunkComplete("{chunk['id']}");
+                }}
+            """)
+
+        # Hide progress modal
+        self._evaluate_js("if (typeof hideSplitProgress === 'function') { hideSplitProgress(); }")
+
+        print(f"[SPLIT] All {len(chunk_recordings)} chunks transcribed")
+        self._show_toast("✅ Tüm parçalar transcribe edildi. Merge etmek için seçin.", "success")
+        self._update_history_ui()
+
+    def _evaluate_js(self, code: str):
+        """Safely evaluate JavaScript code."""
+        if self.dashboard_window:
+            try:
+                self.dashboard_window.evaluate_js(code)
+            except Exception as e:
+                print(f"[SPLIT] Warning: Could not evaluate JS: {e}")
 
     def _update_ui_recording_state(self, is_recording):
         """Notify JS about state."""
