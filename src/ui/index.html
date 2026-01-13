@@ -287,6 +287,98 @@
     </style>
 
     <script>
+        // --- GLOBAL FUNCTIONS (called by Python via evaluate_js) ---
+        // These MUST be defined before pywebview tries to call them
+
+        let recordInterval;
+        let recordStartTime;
+
+        // Expose function to window for Python access (global scope)
+        window.toggleRecordingState = function (isRecording) {
+            console.log("Recording State:", isRecording);
+
+            // For overlay view, we don't have recording UI elements
+            const btn = document.getElementById('recordBtn');
+            if (!btn) {
+                console.log("Overlay view - no record button");
+                return;
+            }
+
+            const icon = document.getElementById('recordIcon')?.firstElementChild;
+            const text = document.getElementById('recordText');
+            const timer = document.getElementById('recordTimer');
+            const pulse = document.getElementById('recordPulse');
+
+            if (isRecording) {
+                // Active State (Recording)
+                btn.classList.add('border-red-500/50');
+                if (pulse) {
+                    pulse.classList.remove('opacity-0');
+                    pulse.classList.add('animate-pulse');
+                }
+
+                if (icon) {
+                    icon.classList.remove('rounded-full');
+                    icon.classList.add('rounded-sm', 'scale-75'); // Stop square shape
+                }
+
+                if (text) {
+                    text.textContent = 'Stop Recording';
+                    text.classList.add('text-red-400');
+                }
+
+                // Start Timer
+                if (timer) {
+                    timer.classList.remove('opacity-0');
+                    recordStartTime = Date.now();
+                    recordInterval = setInterval(updateTimer, 1000);
+                    updateTimer();
+                }
+
+            } else {
+                // Idle State
+                btn.classList.remove('border-red-500/50');
+                if (pulse) {
+                    pulse.classList.add('opacity-0');
+                    pulse.classList.remove('animate-pulse');
+                }
+
+                if (icon) {
+                    icon.classList.add('rounded-full');
+                    icon.classList.remove('rounded-sm', 'scale-75');
+                }
+
+                if (text) {
+                    text.textContent = 'Start Recording';
+                    text.classList.remove('text-red-400');
+                }
+
+                // Stop Timer
+                if (timer) {
+                    timer.classList.add('opacity-0');
+                    clearInterval(recordInterval);
+                    timer.textContent = "00:00";
+                }
+            }
+        };
+
+        function updateTimer() {
+            const timer = document.getElementById('recordTimer');
+            if (timer && recordStartTime) {
+                const diff = Math.floor((Date.now() - recordStartTime) / 1000);
+                const mins = Math.floor(diff / 60).toString().padStart(2, '0');
+                const secs = (diff % 60).toString().padStart(2, '0');
+                timer.textContent = `${mins}:${secs}`;
+            }
+        }
+
+        // Expose updateHistory as well
+        window.updateHistory = function (historyData) {
+            if (typeof renderHistory === 'function') {
+                renderHistory(historyData);
+            }
+        };
+
         // --- ROUTING & INIT ---
         const urlParams = new URLSearchParams(window.location.search);
         const view = urlParams.get('view') || 'dashboard';
@@ -422,70 +514,9 @@
             }
         }
 
-        let recordInterval;
-        let recordStartTime;
-
         async function toggleRecord() {
             await pywebview.api.toggle_recording();
         }
-
-        // Expose function to window for Python access
-        window.toggleRecordingState = function (isRecording) {
-            console.log("Recording State:", isRecording);
-            const btn = document.getElementById('recordBtn');
-            const icon = document.getElementById('recordIcon').firstElementChild;
-            const text = document.getElementById('recordText');
-            const timer = document.getElementById('recordTimer');
-            const pulse = document.getElementById('recordPulse');
-
-            if (isRecording) {
-                // Active State (Recording)
-                btn.classList.add('border-red-500/50');
-                pulse.classList.remove('opacity-0');
-                pulse.classList.add('animate-pulse');
-
-                icon.classList.remove('rounded-full');
-                icon.classList.add('rounded-sm', 'scale-75'); // Stop square shape
-
-                text.textContent = 'Stop Recording';
-                text.classList.add('text-red-400');
-
-                // Start Timer
-                timer.classList.remove('opacity-0');
-                recordStartTime = Date.now();
-                recordInterval = setInterval(updateTimer, 1000);
-                updateTimer();
-
-            } else {
-                // Idle State
-                btn.classList.remove('border-red-500/50');
-                pulse.classList.add('opacity-0');
-                pulse.classList.remove('animate-pulse');
-
-                icon.classList.add('rounded-full');
-                icon.classList.remove('rounded-sm', 'scale-75');
-
-                text.textContent = 'Start Recording';
-                text.classList.remove('text-red-400');
-
-                // Stop Timer
-                timer.classList.add('opacity-0');
-                clearInterval(recordInterval);
-                timer.textContent = "00:00";
-            }
-        };
-
-        function updateTimer() {
-            const diff = Math.floor((Date.now() - recordStartTime) / 1000);
-            const mins = Math.floor(diff / 60).toString().padStart(2, '0');
-            const secs = (diff % 60).toString().padStart(2, '0');
-            document.getElementById('recordTimer').textContent = `${mins}:${secs}`;
-        }
-
-        // Expose updateHistory as well just in case
-        window.updateHistory = function (historyData) {
-            renderHistory(historyData);
-        };
 
     </script>
 </body>

@@ -73,7 +73,7 @@ class Config:
 
     def show_overlay(self) -> bool:
         """Get overlay visibility preference."""
-        return os.getenv("SHOW_OVERLAY", "true").lower() == "true"
+        return os.getenv("SHOW_OVERLAY", "false").lower() == "true"
 
     def play_beep(self) -> bool:
         """Get beep sound preference."""

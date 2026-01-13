@@ -178,6 +178,23 @@
     - Updated contracts (UI-001, CFG-001) and requirements (NFR-004)
     - Added input device configuration to config.py
 
+- [2026-01-13] Recording Button JavaScript Error Fix
+  - What changed: Fixed ReferenceError when clicking Start Recording button
+  - Affected area: src/ui/index.html, src/main.py
+  - Notes:
+    - Root cause: toggleRecordingState JS function was defined after route initialization, causing it to be undefined when Python called evaluate_js
+    - Moved global JS functions (toggleRecordingState, updateHistory) to top of script block before routing
+    - Added null-checks for DOM elements to handle overlay view which lacks record button
+    - Added try-except in Python _update_ui_recording_state() for graceful error handling
+
+- [2026-01-13] Overlay Window Default Disabled
+  - What changed: Disabled floating overlay window by default
+  - Affected area: src/config.py
+  - Notes:
+    - Changed SHOW_OVERLAY default from "true" to "false"
+    - The overlay window was popping up as a separate window when recording started
+    - Users who want the floating overlay indicator can enable it in Settings → Show Overlay toggle
+
 ---
 
 ## KNOWN ISSUES / UNKNOWNS (AI-maintained)

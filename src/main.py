@@ -257,9 +257,15 @@ class GroqWhisperApp:
         """Notify JS about state."""
         code = f"toggleRecordingState({str(is_recording).lower()})"
         if self.dashboard_window:
-            self.dashboard_window.evaluate_js(code)
+            try:
+                self.dashboard_window.evaluate_js(code)
+            except Exception as e:
+                print(f"Warning: Could not update dashboard UI state: {e}")
         if self.overlay_window:
-            self.overlay_window.evaluate_js(code)
+            try:
+                self.overlay_window.evaluate_js(code)
+            except Exception as e:
+                print(f"Warning: Could not update overlay UI state: {e}")
 
     def _update_history_ui(self):
         """Push history update to UI."""
