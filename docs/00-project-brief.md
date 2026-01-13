@@ -195,6 +195,15 @@
     - The overlay window was popping up as a separate window when recording started
     - Users who want the floating overlay indicator can enable it in Settings → Show Overlay toggle
 
+- [2026-01-13] Removed Overlay Feature, Added Auto-Copy
+  - What changed: Completely removed overlay feature, replaced with Auto-Copy toggle
+  - Affected area: src/main.py, src/config.py, src/core/api.py, src/ui/index.html
+  - Notes:
+    - Removed: overlay window creation, show/hide calls, overlay HTML section, overlay toggle
+    - Added: Auto-Copy toggle in settings - automatically copies transcribed text to clipboard
+    - Auto-Copy is enabled by default (stored as AUTO_COPY in .env)
+    - When enabled, both injects text AND copies to clipboard after transcription
+
 ---
 
 ## KNOWN ISSUES / UNKNOWNS (AI-maintained)

@@ -71,9 +71,9 @@ class Config:
         """Get default hotkey string."""
         return os.getenv("DEFAULT_HOTKEY", "<ctrl>+<alt>+<space>")
 
-    def show_overlay(self) -> bool:
-        """Get overlay visibility preference."""
-        return os.getenv("SHOW_OVERLAY", "false").lower() == "true"
+    def auto_copy_enabled(self) -> bool:
+        """Get auto-copy to clipboard preference."""
+        return os.getenv("AUTO_COPY", "true").lower() == "true"
 
     def play_beep(self) -> bool:
         """Get beep sound preference."""
@@ -108,16 +108,16 @@ class Config:
         self._save_env_value("PLAY_BEEP_SOUND", value)
         os.environ["PLAY_BEEP_SOUND"] = value
 
-    def save_overlay_setting(self, enabled: bool) -> None:
+    def save_auto_copy_setting(self, enabled: bool) -> None:
         """
-        Save overlay setting to .env and update os.environ.
+        Save auto-copy setting to .env and update os.environ.
 
         Args:
-            enabled: Whether overlay is enabled.
+            enabled: Whether auto-copy is enabled.
         """
         value = "true" if enabled else "false"
-        self._save_env_value("SHOW_OVERLAY", value)
-        os.environ["SHOW_OVERLAY"] = value
+        self._save_env_value("AUTO_COPY", value)
+        os.environ["AUTO_COPY"] = value
 
     def _save_env_value(self, key: str, value: str) -> None:
         """

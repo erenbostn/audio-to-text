@@ -9,6 +9,7 @@ import sys
 import signal
 import os
 import threading
+import pyperclip
 import time
 from pathlib import Path
 
@@ -28,7 +29,7 @@ from utils.sound_feedback import SoundFeedback
 class GroqWhisperApp:
     """
     Main application orchestrator for GroqWhisper Desktop.
-    Uses PyWebview for UI (Dashboard + Overlay).
+    Uses PyWebview for UI.
     """
 
     def __init__(self):
@@ -37,9 +38,8 @@ class GroqWhisperApp:
         self._is_recording = False
         self._shutdown_flag = False
         
-        # Windows
+        # Window
         self.dashboard_window = None
-        self.overlay_window = None
 
         # Setup core components
         self._setup_components()
@@ -94,31 +94,6 @@ class GroqWhisperApp:
         )
         # Hook into closing event to minimize instead of quit
         self.dashboard_window.events.closing += self._on_dashboard_closing
-
-        # Overlay Window (Hidden initially, frameless, transparent, on top)
-        # Note: Transparent windows might have platform specific issues.
-        # We use a separate window for the overlay.
-        overlay_url = f"{html_url}?view=overlay"
-        self.overlay_window = webview.create_window(
-            'GroqWhisper Overlay',
-            url=overlay_url,
-            width=300,
-            height=100,
-            frameless=True,
-            on_top=True,
-            transparent=True,
-            easy_drag=True,
-            js_api=self.api,
-            x=0, y=0 # Initial position, maybe update later
-        )
-        
-        # We hide overlay initially.
-        # Pywebview doesn't have a direct 'hide()' in create options for all platforms, 
-        # but we can try to hide it after load or position it off-screen.
-        # Best bet: Minimize / Hide.
-        # We'll use a timer to hide it once loaded or just rely on CSS 'hidden' if transparent allows simple click-through?
-        # No, window presence blocks clicks. We need to hide the window itself.
-        # We will hide it in the `run` method after a short delay or rely on API.
         
     def _on_dashboard_closing(self):
         """Handle dashboard close event (quit app)."""
@@ -156,10 +131,6 @@ class GroqWhisperApp:
         self._is_recording = True
         self.sound.play_start_beep()
         
-        # Show overlay
-        if self.config.show_overlay() and self.overlay_window:
-            self.overlay_window.show()
-            
         # Get configured input device
         device_index = self.config.get_input_device()
         if device_index == -1:
@@ -183,11 +154,6 @@ class GroqWhisperApp:
         print("Stopping recording...")
         audio_file = self.recorder.stop_recording()
         self._is_recording = False
-        
-        # Hide overlay
-        if self.overlay_window:
-            self.overlay_window.hide()
-            
         self.sound.play_stop_beep()
         
         if audio_file:
@@ -218,6 +184,10 @@ class GroqWhisperApp:
         if text:
             self.history.update_transcript(recording_id, text)
             self.injector.inject_text(text)
+            # Auto-copy to clipboard if enabled
+            if self.config.auto_copy_enabled():
+                pyperclip.copy(text)
+                print("Text copied to clipboard.")
             self._update_history_ui()
         else:
              print("Transcription failed.")
@@ -249,6 +219,10 @@ class GroqWhisperApp:
         if text:
             self.history.update_transcript(recording_id, text)
             self.injector.inject_text(text)
+            # Auto-copy to clipboard if enabled
+            if self.config.auto_copy_enabled():
+                pyperclip.copy(text)
+                print("Text copied to clipboard.")
             self._update_history_ui()
         else:
             print("File transcription failed.")
@@ -261,11 +235,6 @@ class GroqWhisperApp:
                 self.dashboard_window.evaluate_js(code)
             except Exception as e:
                 print(f"Warning: Could not update dashboard UI state: {e}")
-        if self.overlay_window:
-            try:
-                self.overlay_window.evaluate_js(code)
-            except Exception as e:
-                print(f"Warning: Could not update overlay UI state: {e}")
 
     def _update_history_ui(self):
         """Push history update to UI."""
@@ -318,8 +287,6 @@ class GroqWhisperApp:
         # Pywebview windows close automatically on sys.exit usually, or we can explicit destroy
         if self.dashboard_window:
             self.dashboard_window.destroy()
-        if self.overlay_window:
-            self.overlay_window.destroy()
             
         sys.exit(0)
 
@@ -331,15 +298,7 @@ class GroqWhisperApp:
         threading.Thread(target=self.tray.run, daemon=True).start()
 
         # Start Webview loop (Blocker)
-        # Since we created windows already, just calling start() works.
-        # We should hide overlay initially after a brief delay ensuring it's created.
-        
-        def initial_hide():
-            time.sleep(0.5)
-            if self.overlay_window:
-                self.overlay_window.hide()
-                
-        webview.start(func=initial_hide, debug=False)
+        webview.start(debug=False)
 
 def main():
     app = GroqWhisperApp()

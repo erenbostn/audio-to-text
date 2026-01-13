@@ -18,9 +18,9 @@ class Api:
         """Return current configuration."""
         return {
             "api_key": self._config.get_api_key(),
-            "input_device_index": self._config.get_input_device(),  # Assuming config has this or we mock it
+            "input_device_index": self._config.get_input_device(),
             "sound_enabled": self._config.play_beep(),
-            "overlay_enabled": self._config.show_overlay(),
+            "auto_copy_enabled": self._config.auto_copy_enabled(),
             "language": self._config.get_language()
         }
 
@@ -36,9 +36,9 @@ class Api:
         if "sound_enabled" in config:
             self._config.save_beep_setting(config["sound_enabled"])
             
-        # Save Overlay Setting
-        if "overlay_enabled" in config:
-            self._config.save_overlay_setting(config["overlay_enabled"])
+        # Save Auto-Copy Setting
+        if "auto_copy_enabled" in config:
+            self._config.save_auto_copy_setting(config["auto_copy_enabled"])
             
         # Save Language
         if "language" in config:

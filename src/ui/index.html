@@ -216,8 +216,8 @@
                         </label>
                         <label
                             class="flex items-center justify-between p-3 bg-gray-800/30 border border-gray-700 rounded-lg cursor-pointer hover:bg-gray-800/50 transition-colors">
-                            <span class="text-sm font-medium text-gray-300">Show Overlay</span>
-                            <input type="checkbox" id="overlayToggle"
+                            <span class="text-sm font-medium text-gray-300">Auto-Copy</span>
+                            <input type="checkbox" id="autoCopyToggle"
                                 class="w-4 h-4 rounded border-gray-600 bg-gray-700 text-orange-500 focus:ring-offset-gray-900 focus:ring-orange-500">
                         </label>
                     </div>
@@ -247,44 +247,7 @@
         </main>
     </div>
 
-    <!-- OVERLAY VIEW -->
-    <div id="overlay" class="hidden h-screen w-screen flex items-center justify-center draggable-region">
-        <div class="glass px-4 py-2 rounded-full flex items-center gap-3 shadow-2xl">
-            <div class="relative flex items-center justify-center w-4 h-4">
-                <div class="absolute w-3 h-3 bg-red-500 rounded-full animate-ping opacity-75"></div>
-                <div class="w-2.5 h-2.5 bg-red-500 rounded-full shadow-[0_0_10px_rgba(239,68,68,0.5)]"></div>
-            </div>
-            <span class="text-sm font-medium text-white tracking-wide">Listening...</span>
-            <div class="flex gap-0.5 items-end h-3 ml-1">
-                <div class="w-0.5 bg-white/50 rounded-full animate-[wave_1s_ease-in-out_infinite]" style="height: 40%">
-                </div>
-                <div class="w-0.5 bg-white/50 rounded-full animate-[wave_1.2s_ease-in-out_infinite_0.1s]"
-                    style="height: 100%"></div>
-                <div class="w-0.5 bg-white/50 rounded-full animate-[wave_0.8s_ease-in-out_infinite_0.2s]"
-                    style="height: 60%"></div>
-                <div class="w-0.5 bg-white/50 rounded-full animate-[wave_1.1s_ease-in-out_infinite_0.3s]"
-                    style="height: 80%"></div>
-            </div>
-        </div>
     </div>
-
-    <style>
-        .draggable-region {
-            -webkit-app-region: drag;
-        }
-
-        @keyframes wave {
-
-            0%,
-            100% {
-                height: 20%;
-            }
-
-            50% {
-                height: 100%;
-            }
-        }
-    </style>
 
     <script>
         // --- GLOBAL FUNCTIONS (called by Python via evaluate_js) ---
@@ -380,17 +343,10 @@
         };
 
         // --- ROUTING & INIT ---
-        const urlParams = new URLSearchParams(window.location.search);
-        const view = urlParams.get('view') || 'dashboard';
-
-        if (view === 'overlay') {
-            document.getElementById('overlay').classList.remove('hidden');
-            document.body.classList.add('bg-transparent'); // Ensure body is transparent for overlay
-        } else {
-            document.getElementById('dashboard').classList.remove('hidden');
-            document.body.classList.remove('bg-transparent');
-            initDashboard();
-        }
+        // Dashboard only - removed overlay view
+        document.getElementById('dashboard').classList.remove('hidden');
+        document.body.classList.remove('bg-transparent');
+        initDashboard();
 
         // --- DASHBOARD LOGIC ---
         async function initDashboard() {
@@ -415,7 +371,7 @@
             if (!config) return;
             document.getElementById('apiKey').value = config.api_key || '';
             document.getElementById('soundToggle').checked = config.sound_enabled !== false;
-            document.getElementById('overlayToggle').checked = config.overlay_enabled !== false;
+            document.getElementById('autoCopyToggle').checked = config.auto_copy_enabled !== false;
             if (config.language) {
                 document.getElementById('langSelect').value = config.language;
             }
@@ -450,7 +406,7 @@
                 api_key: document.getElementById('apiKey').value,
                 input_device_index: document.getElementById('micSelect').value,
                 sound_enabled: document.getElementById('soundToggle').checked,
-                overlay_enabled: document.getElementById('overlayToggle').checked,
+                auto_copy_enabled: document.getElementById('autoCopyToggle').checked,
                 language: document.getElementById('langSelect').value
             };
 
