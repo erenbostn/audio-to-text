@@ -9,6 +9,9 @@ sounddevice>=0.4.6
 numpy>=1.24.0
 soundfile>=0.12.1
 
+# Audio metadata (for m4a and other formats)
+mutagen>=1.47.0
+
 # System Tray & Icons
 pystray>=0.19.5
 Pillow>=10.0.0

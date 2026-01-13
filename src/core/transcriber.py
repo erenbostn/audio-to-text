@@ -91,11 +91,25 @@ class GroqTranscriber:
         Returns:
             Duration in seconds
         """
-        import soundfile as sf
-        with sf.SoundFile(filepath) as audio_file:
-            frames = len(audio_file)
-            samplerate = audio_file.samplerate
-            return frames / samplerate
+        # Try soundfile first (for wav, mp3, flac, ogg)
+        try:
+            import soundfile as sf
+            with sf.SoundFile(filepath) as audio_file:
+                frames = len(audio_file)
+                samplerate = audio_file.samplerate
+                return frames / samplerate
+        except Exception:
+            # Fallback to mutagen for m4a and other formats
+            try:
+                from mutagen.mp4 import MP4
+                audio = MP4(filepath)
+                return audio.info.length
+            except ImportError:
+                print(f"[WARNING] mutagen not installed. Cannot get duration for: {filepath}")
+                return 0.0
+            except Exception as e:
+                print(f"[ERROR] Failed to get duration with mutagen: {e}")
+                return 0.0
 
     def transcribe(self, audio_file_path: str, language: Optional[str] = "tr", translate: bool = False) -> Optional[str]:
         """

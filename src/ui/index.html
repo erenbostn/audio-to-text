@@ -156,13 +156,13 @@
                     </svg>
                 </div>
                 <div>
-                    <h3 class="text-lg font-semibold text-white">Uzun Ses Dosyası Tespit Edildi</h3>
+                    <h3 class="text-lg font-semibold text-white">Dosya Parçalanmalı</h3>
                     <p id="splitModalDuration" class="text-sm text-gray-400"></p>
                 </div>
             </div>
 
             <div class="bg-gray-900/50 rounded-lg p-4 mb-4">
-                <p class="text-sm text-gray-300 mb-3">Bu dosya <span class="text-orange-400 font-semibold">10 dakikadan uzun</span>. Otomatik olarak parçalara bölünsün mü?</p>
+                <p class="text-sm text-gray-300 mb-3">Bu dosya <span class="text-orange-400 font-semibold">çok büyük</span>. Parçalara bölünsün mü?</p>
                 <ul class="text-xs text-gray-400 space-y-1">
                     <li>• Her parça: 10 dakika</li>
                     <li>• Overlap: 10 saniye (bağlam koruması)</li>
@@ -185,7 +185,18 @@
     <!-- Split Progress Modal -->
     <div id="splitProgressModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
         <div class="bg-gray-800 border border-gray-700 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
-            <h3 class="text-lg font-semibold text-white mb-4">Parçalar Transcribe Ediliyor</h3>
+            <h3 class="text-lg font-semibold text-white mb-4">Dosya İşleniyor</h3>
+
+            <!-- Overall Progress Bar -->
+            <div class="mb-4">
+                <div class="flex justify-between text-sm text-gray-400 mb-1">
+                    <span>Toplam İlerleme</span>
+                    <span id="overallProgressPercent">0%</span>
+                </div>
+                <div class="w-full bg-gray-700 rounded-full h-3">
+                    <div id="overallProgressBar" class="bg-blue-500 h-3 rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+            </div>
 
             <div id="chunkProgressContainer" class="space-y-3 max-h-64 overflow-y-auto">
                 <!-- Chunk items will be dynamically added here -->
@@ -335,7 +346,7 @@
                         </label>
                         <label
                             class="flex flex-col items-center p-3 bg-gray-800/30 border border-gray-700 rounded-lg cursor-pointer hover:bg-gray-800/50 transition-colors">
-                            <span class="text-xs font-medium text-gray-400 mb-2">Translate</span>
+                            <span class="text-xs font-medium text-gray-400 mb-2">Translate EN</span>
                             <input type="checkbox" id="translateToggle"
                                 onchange="saveToggleInstant('translate_enabled', this.checked)"
                                 class="w-4 h-4 rounded border-gray-600 bg-gray-700 text-orange-500 focus:ring-offset-gray-900 focus:ring-orange-500">
@@ -1087,14 +1098,18 @@
 
             if (!filepath) return;
 
-            // Check duration
+            // Check duration and file size
             const durationCheck = await pywebview.api.check_file_duration(filepath);
 
             if (durationCheck.should_split) {
                 // Show split confirmation modal
                 pendingFileForSplit = filepath;
-                document.getElementById('splitModalDuration').textContent =
-                    `Süre: ${durationCheck.duration_minutes.toFixed(1)} dakika`;
+
+                let reason = durationCheck.force_split_by_size
+                    ? `Dosya boyutu: ${durationCheck.file_size_mb.toFixed(1)} MB (API limit: 25 MB)`
+                    : `Süre: ${durationCheck.duration_minutes.toFixed(1)} dakika`;
+
+                document.getElementById('splitModalDuration').textContent = reason;
                 document.getElementById('splitModal').classList.remove('hidden');
             } else {
                 // Normal transcription
@@ -1147,7 +1162,12 @@
                 container.insertAdjacentHTML('beforeend', chunkHtml);
             }
 
-            // Update overall progress
+            // Update overall progress (split = 10%, each chunk = 90%/total)
+            const splitWeight = 10;
+            const chunkWeight = (100 - splitWeight) / total;
+            const overallPercent = splitWeight + ((current - 1) * chunkWeight);
+            updateOverallProgress(overallPercent);
+
             document.getElementById('splitProgressText').textContent =
                 `Parça ${current}/${total} transcribe ediliyor...`;
         };
@@ -1163,12 +1183,65 @@
                 status.textContent = '✓ Tamamlandı';
                 status.classList.remove('text-gray-400');
                 status.classList.add('text-green-400');
+
+                // Mark as complete for progress calculation
+                chunkEl.classList.add('chunk-item-complete');
             }
+
+            // Update overall progress after marking chunk complete
+            const completedChunks = document.querySelectorAll('.chunk-item-complete').length;
+            const totalChunks = document.querySelectorAll('#chunkProgressContainer > div').length;
+            const splitWeight = 10;
+            const chunkWeight = (100 - splitWeight) / totalChunks;
+            const overallPercent = splitWeight + (completedChunks * chunkWeight);
+            updateOverallProgress(overallPercent);
+        };
+
+        // Update overall progress bar
+        function updateOverallProgress(percent) {
+            const progressBar = document.getElementById('overallProgressBar');
+            const progressPercent = document.getElementById('overallProgressPercent');
+            if (progressBar && progressPercent) {
+                progressBar.style.width = percent + '%';
+                progressPercent.textContent = Math.round(percent) + '%';
+            }
+        }
+
+        // Show split step progress (called when starting to split file)
+        window.showSplitStepProgress = function() {
+            const container = document.getElementById('chunkProgressContainer');
+            const splitItem = document.createElement('div');
+            splitItem.id = 'splitStepItem';
+            splitItem.className = 'flex items-center gap-3 bg-gray-900/50 rounded-lg p-3';
+            splitItem.innerHTML = `
+                <span class="text-sm text-gray-300 flex-1">Dosya Bölünüyor...</span>
+                <div class="w-32 bg-gray-700 rounded-full h-2">
+                    <div class="bg-orange-500 h-2 rounded-full animate-pulse" style="width: 100%"></div>
+                </div>
+            `;
+            container.prepend(splitItem);
+            updateOverallProgress(0);
+        };
+
+        // Mark split step complete (called after file is split)
+        window.markSplitStepComplete = function() {
+            const splitItem = document.getElementById('splitStepItem');
+            if (splitItem) {
+                splitItem.querySelector('span').textContent = 'Dosya Bölündü ✓';
+                const progressBar = splitItem.querySelector('.bg-orange-500');
+                if (progressBar) {
+                    progressBar.className = 'bg-green-500 h-2 rounded-full';
+                }
+                splitItem.classList.add('chunk-item-complete');
+            }
+            updateOverallProgress(10); // Split step = 10%
         };
 
         window.hideSplitProgress = function() {
             document.getElementById('splitProgressModal').classList.add('hidden');
             document.getElementById('chunkProgressContainer').innerHTML = '';
+            // Reset overall progress bar
+            updateOverallProgress(0);
         };
 
         async function toggleRecord() {

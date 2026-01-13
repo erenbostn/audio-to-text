@@ -237,15 +237,22 @@ class Api:
             Dict with duration info and should_split flag
         """
         from core.transcriber import GroqTranscriber
+        from pathlib import Path
 
         transcriber = GroqTranscriber(self._config.get_api_key())
         duration_seconds = transcriber.get_audio_duration(filepath)
 
+        # Also check file size - if > 25 MB, force split regardless of duration
+        file_size_mb = Path(filepath).stat().st_size / (1024 * 1024)
+        force_split_by_size = file_size_mb > 25
+
         return {
             "duration_seconds": duration_seconds,
-            "duration_minutes": duration_seconds / 60,
-            "should_split": duration_seconds > 600,
-            "threshold_seconds": 600
+            "duration_minutes": duration_seconds / 60 if duration_seconds > 0 else 0,
+            "should_split": duration_seconds > 600 or force_split_by_size,
+            "threshold_seconds": 600,
+            "file_size_mb": file_size_mb,
+            "force_split_by_size": force_split_by_size
         }
 
     def split_audio_file(self, filepath: str, recording_id: str) -> Dict[str, Any]:

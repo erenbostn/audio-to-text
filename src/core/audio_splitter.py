@@ -23,11 +23,25 @@ class AudioSplitter:
 
     def get_audio_duration(self, filepath: str) -> float:
         """Get audio duration in seconds."""
-        import soundfile as sf
-        with sf.SoundFile(filepath) as audio_file:
-            frames = len(audio_file)
-            samplerate = audio_file.samplerate
-            return frames / samplerate
+        # Try soundfile first (for wav, mp3, flac, ogg)
+        try:
+            import soundfile as sf
+            with sf.SoundFile(filepath) as audio_file:
+                frames = len(audio_file)
+                samplerate = audio_file.samplerate
+                return frames / samplerate
+        except Exception:
+            # Fallback to mutagen for m4a and other formats
+            try:
+                from mutagen.mp4 import MP4
+                audio = MP4(filepath)
+                return audio.info.length
+            except ImportError:
+                print(f"[WARNING] mutagen not installed. Cannot get duration for: {filepath}")
+                return 0.0
+            except Exception as e:
+                print(f"[ERROR] Failed to get duration with mutagen: {e}")
+                return 0.0
 
     def should_split(self, filepath: str, threshold_seconds: int = 600) -> bool:
         """Check if audio file should be split (duration > threshold)."""
@@ -70,8 +84,15 @@ class AudioSplitter:
         while current_frame < total_frames:
             end_frame = min(current_frame + chunk_frames, total_frames)
 
+            # Calculate actual chunk duration
+            part_duration_frames = end_frame - current_frame
+            part_duration_seconds = part_duration_frames / samplerate
+
+            # Skip if chunk is too small (less than 1 second or too much overlap)
+            if part_duration_seconds < 1.0:
+                break
+
             # Check max duration
-            part_duration_seconds = (end_frame - current_frame) / samplerate
             if part_duration_seconds > self.MAX_PART_DURATION_SECONDS:
                 raise ValueError(f"Part {part_number} exceeds max duration: {part_duration_seconds}s")
 
@@ -105,7 +126,16 @@ class AudioSplitter:
             })
 
             # Move to next chunk (with overlap)
+            # CRITICAL: If we reached the end, break to prevent infinite loop
+            if end_frame >= total_frames:
+                break
+
             current_frame = end_frame - overlap_frames
+
+            # Safety: If we're not making progress, break
+            if current_frame >= end_frame:
+                break
+
             part_number += 1
 
         # Create job metadata

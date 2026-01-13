@@ -262,14 +262,21 @@ class GroqWhisperApp:
 
         print(f"[SPLIT] Starting split workflow for: {filepath}")
 
+        # Show split step in UI
+        self._evaluate_js("if (typeof showSplitStepProgress === 'function') { showSplitStepProgress(); }")
+
         # Split file into chunks
         try:
             job_metadata = self.api.split_audio_file(filepath, recording_id)
             print(f"[SPLIT] Created {job_metadata['total_parts']} chunks")
         except Exception as e:
             print(f"[SPLIT] Error splitting file: {e}")
+            self._evaluate_js("if (typeof hideSplitProgress === 'function') { hideSplitProgress(); }")
             self._show_toast("❌ Dosya parçalanamadı", "error")
             return
+
+        # Mark split step complete
+        self._evaluate_js("if (typeof markSplitStepComplete === 'function') { markSplitStepComplete(); }")
 
         # Create history entries for chunks
         chunk_recordings = []
