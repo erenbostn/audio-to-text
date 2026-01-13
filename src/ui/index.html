@@ -259,12 +259,22 @@
                                 onchange="saveToggleInstant('translate_enabled', this.checked)"
                                 class="w-4 h-4 rounded border-gray-600 bg-gray-700 text-orange-500 focus:ring-offset-gray-900 focus:ring-orange-500">
                         </label>
-                        <label
-                            class="flex flex-col items-center p-3 bg-gray-800/30 border border-gray-700 rounded-lg cursor-pointer hover:bg-gray-800/50 transition-colors">
-                            <span class="text-xs font-medium text-gray-400 mb-2">Edit</span>
-                            <input type="checkbox" id="allowEditToggle" onchange="toggleEditMode()"
-                                class="w-4 h-4 rounded border-gray-600 bg-gray-700 text-orange-500 focus:ring-offset-gray-900 focus:ring-orange-500">
-                        </label>
+                        <!-- Lock Button (Edit Mode) -->
+                        <div id="lockBtn" onclick="toggleLockState()"
+                            class="flex flex-col items-center p-3 bg-gray-800/30 border border-gray-700 rounded-lg cursor-pointer hover:bg-gray-800/50 transition-all">
+                            <!-- Lock Icon (changes based on state) -->
+                            <div id="lockIcon" class="mb-1">
+                                <!-- Locked Icon (default) -->
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none"
+                                    viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                </svg>
+                            </div>
+                            <span id="lockText" class="text-xs font-medium text-gray-400">Locked</span>
+                            <!-- Hidden checkbox for state -->
+                            <input type="checkbox" id="allowEditToggle" class="hidden">
+                        </div>
                     </div>
                 </div>
             </section>
@@ -576,8 +586,47 @@
                     ta.classList.remove('border', 'border-gray-600', 'rounded', 'p-1');
                 }
             });
+        }
 
-            showToast(isEditable ? '✏️ Edit mode enabled' : '🔒 Edit mode disabled', 'info');
+        // Toggle Lock Button state (visual + logic)
+        function toggleLockState() {
+            const checkbox = document.getElementById('allowEditToggle');
+            const lockBtn = document.getElementById('lockBtn');
+            const lockIcon = document.getElementById('lockIcon');
+            const lockText = document.getElementById('lockText');
+
+            // Toggle checkbox state
+            checkbox.checked = !checkbox.checked;
+            const isUnlocked = checkbox.checked;
+
+            if (isUnlocked) {
+                // UNLOCKED state - Edit Mode ON
+                lockBtn.classList.remove('bg-gray-800/30', 'border-gray-700');
+                lockBtn.classList.add('bg-orange-500/20', 'border-orange-500/50', 'shadow-lg', 'shadow-orange-500/20');
+                lockIcon.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                    </svg>`;
+                lockText.textContent = 'Edit ON';
+                lockText.classList.remove('text-gray-400');
+                lockText.classList.add('text-orange-400');
+                showToast('✏️ Edit mode enabled', 'info');
+            } else {
+                // LOCKED state - Edit Mode OFF
+                lockBtn.classList.add('bg-gray-800/30', 'border-gray-700');
+                lockBtn.classList.remove('bg-orange-500/20', 'border-orange-500/50', 'shadow-lg', 'shadow-orange-500/20');
+                lockIcon.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>`;
+                lockText.textContent = 'Locked';
+                lockText.classList.add('text-gray-400');
+                lockText.classList.remove('text-orange-400');
+                showToast('🔒 Edit mode disabled', 'info');
+            }
+
+            // Apply to textareas
+            toggleEditMode();
         }
 
         // Auto-save edited history text
