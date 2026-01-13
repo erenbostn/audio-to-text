@@ -177,21 +177,16 @@
                     <!-- API Key -->
                     <div class="group">
                         <label class="block text-sm font-medium text-gray-400 mb-1.5">Groq API Key</label>
-                        <div class="relative">
-                            <input type="password" id="apiKey" onblur="saveApiKeyInstant()"
-                                class="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all outline-none placeholder-gray-600"
-                                placeholder="gsk_...">
-                            <button onclick="toggleVisibility('apiKey')"
-                                class="absolute right-3 top-2.5 text-gray-500 hover:text-white transition-colors">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
-                                    stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                </svg>
+                        <div class="flex gap-2">
+                            <input type="password" id="apiKey"
+                                class="flex-1 bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all outline-none placeholder-gray-600"
+                                placeholder="Enter new API key (gsk_...)">
+                            <button onclick="saveApiKeyInstant()"
+                                class="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white text-sm font-medium rounded-lg transition-colors">
+                                Save
                             </button>
                         </div>
+                        <p id="apiKeyStatus" class="text-xs text-gray-500 mt-1"></p>
                     </div>
 
                     <!-- Microphone Selection -->
@@ -435,7 +430,20 @@
 
         function populateConfig(config) {
             if (!config) return;
-            document.getElementById('apiKey').value = config.api_key || '';
+
+            // Never populate API key field - always empty on load (security)
+            document.getElementById('apiKey').value = '';
+
+            // Show status message if key exists
+            const statusEl = document.getElementById('apiKeyStatus');
+            if (config.api_key_exists) {
+                statusEl.textContent = '✓ API key is configured';
+                statusEl.className = 'text-xs text-green-500 mt-1';
+            } else {
+                statusEl.textContent = '⚠ No API key configured';
+                statusEl.className = 'text-xs text-yellow-500 mt-1';
+            }
+
             document.getElementById('soundToggle').checked = config.sound_enabled !== false;
             document.getElementById('autoPasteToggle').checked = config.auto_paste_enabled !== false;
             document.getElementById('translateToggle').checked = config.translate_enabled === true;
@@ -504,9 +512,27 @@
         // Instant API key save
         async function saveApiKeyInstant() {
             const apiKey = document.getElementById('apiKey').value;
-            if (apiKey) {
+
+            if (!apiKey || !apiKey.trim()) {
+                showToast('⚠ Please enter an API key', 'error');
+                return;
+            }
+
+            if (!apiKey.startsWith('gsk_')) {
+                showToast('⚠ Invalid key format (should start with gsk_)', 'error');
+                return;
+            }
+
+            try {
                 await pywebview.api.save_api_key(apiKey);
+                // Clear the input field immediately after save
+                document.getElementById('apiKey').value = '';
+                // Update status message
+                document.getElementById('apiKeyStatus').textContent = '✓ API key saved successfully';
+                document.getElementById('apiKeyStatus').className = 'text-xs text-green-500 mt-1';
                 showToast('🔑 API Key saved', 'success');
+            } catch (error) {
+                showToast('❌ Failed to save API key', 'error');
             }
         }
 
@@ -553,10 +579,6 @@
         // Expose showToast to window for Python access
         window.showToast = showToast;
 
-        function toggleVisibility(id) {
-            const el = document.getElementById(id);
-            el.type = el.type === 'password' ? 'text' : 'password';
-        }
         // Store history data globally for batch operations
         let currentHistoryItems = [];
 

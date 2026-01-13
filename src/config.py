@@ -30,13 +30,38 @@ class Config:
         """Get Groq API key from environment."""
         return os.getenv("GROQ_API_KEY")
 
+    def has_api_key(self) -> bool:
+        """
+        Check if API key exists without returning it.
+
+        Returns:
+            True if a valid API key is configured, False otherwise.
+
+        Security: This method enables existence checks without exposing the actual key.
+        """
+        api_key = os.getenv("GROQ_API_KEY")
+        return bool(api_key and api_key.strip() and api_key != "your_groq_api_key_here")
+
     def save_api_key(self, api_key: str) -> None:
         """
         Save Groq API key to .env file.
 
         Args:
             api_key: The API key to save.
+
+        Security: Key is written directly to .env and never logged.
         """
+        # Validate key format (Groq keys start with "gsk_")
+        if not api_key or not api_key.strip():
+            raise ValueError("API key cannot be empty")
+
+        api_key = api_key.strip()
+
+        # Create .env if it doesn't exist
+        if not self.env_path.exists():
+            self.env_path.parent.mkdir(parents=True, exist_ok=True)
+            self.env_path.touch()
+
         # Read existing .env content
         content = ""
         if self.env_path.exists():
@@ -58,6 +83,9 @@ class Config:
         # Write back to .env
         with open(self.env_path, "w", encoding="utf-8") as f:
             f.write("\n".join(lines))
+
+        # Update runtime environment immediately
+        os.environ["GROQ_API_KEY"] = api_key
 
     def get_sample_rate(self) -> int:
         """Get recording sample rate."""

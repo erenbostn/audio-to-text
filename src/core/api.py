@@ -17,7 +17,7 @@ class Api:
     def get_config(self) -> Dict[str, Any]:
         """Return current configuration."""
         return {
-            "api_key": self._config.get_api_key(),
+            "api_key_exists": self._config.has_api_key(),
             "input_device_index": self._config.get_input_device(),
             "sound_enabled": self._config.play_beep(),
             "auto_paste_enabled": self._config.auto_paste_enabled(),
@@ -28,45 +28,37 @@ class Api:
 
     def save_config(self, config: Dict[str, Any]) -> None:
         """Save configuration from UI."""
-        print(f"[API] Saving config: {config}")
-        
-        # Save API Key
-        if "api_key" in config:
+        # Sanitize config before logging (remove api_key if present)
+        sanitized = {k: v for k, v in config.items() if k != "api_key"}
+        print(f"[API] Saving config: {sanitized}")
+
+        # Save API Key (if present)
+        if "api_key" in config and config["api_key"]:
             self._config.save_api_key(config["api_key"])
-            
+            print("[API] API key updated")
+
         # Save Sound Setting
         if "sound_enabled" in config:
             self._config.save_beep_setting(config["sound_enabled"])
-            
+
         # Save Auto-Paste Setting
         if "auto_paste_enabled" in config:
             self._config.save_auto_paste_setting(config["auto_paste_enabled"])
-            
+
         # Save Always on Top Setting
         if "always_on_top" in config:
             self._config.save_always_on_top_setting(config["always_on_top"])
             # Apply immediately
             self.set_always_on_top(config["always_on_top"])
-            
+
         # Save Translate Setting
         if "translate_enabled" in config:
             self._config.save_translate_setting(config["translate_enabled"])
-            
+
         # Save Language
         if "language" in config:
             self._config.save_language(config["language"])
-            
-        # Device Index - We might need to implement this in Config if not present
-        # Currently config stores device index? Let's check config.py later. 
-        # For now assume we just keep it in runtime or config if supported.
-        # But wait, config.py didn't seem to have device index storage in the Plan.
-        # We will check config.py or just use it if available.
-        
-        # Determine language? The previous UI had language. New UI mock didn't show it explicitly in my code, 
-        # but I should probably support it if the user wants it.
-        # The user request didn't explicitly ask for language dropdown in specific UI instructions,
-        # but "Dashboard" implies settings. I'll stick to what I wrote in HTML for now.
-        
+
         # Notify app to reload/apply
         self._app.reload_config()
 
@@ -82,8 +74,15 @@ class Api:
 
     def save_api_key(self, api_key: str) -> None:
         """Save API key instantly."""
+        if not api_key or not api_key.strip():
+            print("[API] Invalid API key (empty)")
+            return
+
+        if not api_key.startswith("gsk_"):
+            print("[API] Warning: API key format may be invalid")
+
         self._config.save_api_key(api_key)
-        print("[API] API key saved")
+        print("[API] API key saved successfully")
 
     def save_microphone(self, device_index: str) -> None:
         """Save microphone selection instantly."""

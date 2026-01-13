@@ -39,7 +39,8 @@ venv.bak/
 *.swo
 *~
 .DS_Store
-
+.claude/
+ai/
 # Project specific
 temp/
 *.wav
@@ -52,3 +53,10 @@ test_audio.wav
 # OS
 Thumbs.db
 desktop.ini
+
+# Documentation (optional/informational)
+information/
+
+# Unused Assets
+assets/microphone (1).png
+assets/mic_icon.png
