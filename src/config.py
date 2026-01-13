@@ -148,3 +148,20 @@ class Config:
         # Write back to .env
         with open(self.env_path, "w", encoding="utf-8") as f:
             f.write("\n".join(lines))
+
+    def get_input_device(self) -> int:
+        """Get input device index from .env."""
+        try:
+            return int(os.getenv("INPUT_DEVICE", "-1"))
+        except ValueError:
+            return -1
+
+    def save_input_device(self, device_index: int) -> None:
+        """
+        Save input device index to .env.
+
+        Args:
+            device_index: Device index.
+        """
+        self._save_env_value("INPUT_DEVICE", str(device_index))
+        os.environ["INPUT_DEVICE"] = str(device_index)

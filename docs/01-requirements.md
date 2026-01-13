@@ -68,10 +68,11 @@ When recording state changes, the application MUST:
 - MUST properly handle Turkish locale characters
 
 ### NFR-004: Visual Design
-- MUST use customtkinter framework for modern UI
-- MUST use dark theme (`set_appearance_mode("Dark")`)
-- MUST use dark-blue color theme (`set_default_color_theme("dark-blue")`)
-- MUST follow glass/acrylic visual style as defined in html.md concept
+- MUST use pywebview for UI rendering
+- MUST use Vanilla JavaScript + Tailwind CSS for styling
+- MUST use dark theme (`bg-gray-900`) with glassmorphism effects
+- MUST use Inter font
+- MUST follow "Glassmorphism" aesthetic as originally defined
 
 ### NFR-005: Configuration Management
 - API Key MUST be stored in `.env` file (not hardcoded)

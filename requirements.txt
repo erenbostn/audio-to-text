@@ -2,7 +2,7 @@
 # Python 3.10+ | Windows Only
 
 # UI Framework
-customtkinter>=5.2.0
+pywebview>=5.1
 
 # Audio Recording
 sounddevice>=0.4.6

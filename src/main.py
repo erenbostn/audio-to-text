@@ -1,13 +1,15 @@
 """
 GroqWhisper Desktop - Main Entry Point
-Integrates all components into a functional desktop application.
+Integrates all components into a functional desktop application using PyWebview.
 """
 
-import customtkinter as ctk
+import webview
 from pynput.keyboard import GlobalHotKeys
 import sys
 import signal
-import atexit
+import os
+import threading
+import time
 from pathlib import Path
 
 # Add src to path for imports
@@ -18,8 +20,7 @@ from core.recorder import AudioRecorder
 from core.transcriber import GroqTranscriber
 from core.input_simulator import TextInjector
 from core.history_manager import HistoryManager
-from ui.overlay import RecordingOverlay
-from ui.settings_window import SettingsWindow
+from core.api import Api
 from ui.tray import SystemTray
 from utils.sound_feedback import SoundFeedback
 
@@ -27,104 +28,123 @@ from utils.sound_feedback import SoundFeedback
 class GroqWhisperApp:
     """
     Main application orchestrator for GroqWhisper Desktop.
-
-    Manages:
-    - Global hotkey listener for recording toggle
-    - Audio recording workflow
-    - Transcription via Groq API
-    - Text injection to active window
-    - System tray integration
-    - Settings window
+    Uses PyWebview for UI (Dashboard + Overlay).
     """
-
-    # Class variable to track running state
-    _running = False
 
     def __init__(self):
         """Initialize the application."""
-        # Initialize customtkinter
-        ctk.set_appearance_mode("Dark")
-        ctk.set_default_color_theme("dark-blue")
-
-        # Load configuration
         self.config = Config()
-
-        # Recording state
         self._is_recording = False
-        self._settings_window = None
         self._shutdown_flag = False
+        
+        # Windows
+        self.dashboard_window = None
+        self.overlay_window = None
 
-        # Setup core components (before UI)
+        # Setup core components
         self._setup_components()
-
-        # Create SettingsWindow FIRST - it becomes the main root window
-        self._settings_window = SettingsWindow(self.config, on_close=self._on_settings_close, app=self)
-        self.root = self._settings_window  # Reference to main window
-
-        # Setup remaining components (overlay needs the root)
-        self._setup_remaining_components()
+        
+        # Setup API Bridge
+        self.api = Api(self)
+        
+        # Setup UI
+        self._setup_ui()
+        
+        # Setup Hotkeys
         self._setup_hotkeys()
 
     def _setup_components(self) -> None:
-        """Initialize core application components (before UI)."""
-        # Core modules
+        """Initialize core application components."""
         self.recorder = AudioRecorder(
             sample_rate=self.config.get_sample_rate(),
             channels=self.config.get_channels()
         )
         self.transcriber = GroqTranscriber()
         self.injector = TextInjector()
-
-        # History manager
         self.history = HistoryManager()
-
-        # Utilities
         self.sound = SoundFeedback(self.config.play_beep)
+        
+        # Reuse existing tray (might need adjustments if it relies on tkinter loop, 
+        # but pystray usually has its own loop or runs in thread. 
+        # We'll run it in a thread or let pystray handle it)
+        # We need to be careful about not blocking the main thread which webview needs.
+        # usually tray runs in separate thread.
         self.tray = SystemTray(
-            on_restore=self._show_settings,
+            on_restore=self.show_dashboard,
             on_quit=self.shutdown
         )
 
-    def _setup_remaining_components(self) -> None:
-        """Initialize UI components that need the root window."""
-        # UI components (overlay needs the root)
-        self.overlay = RecordingOverlay(self.root)
+    def _setup_ui(self) -> None:
+        """Initialize PyWebview windows."""
+        
+        # Path to index.html
+        html_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'ui', 'index.html'))
+        html_url = f"file://{html_path}"
+        
+        # Dashboard Window
+        self.dashboard_window = webview.create_window(
+            'GroqWhisper Desktop', 
+            url=html_url,
+            width=500,
+            height=850,
+            resizable=True,
+            js_api=self.api,
+            on_top=False,
+            confirm_close=True
+        )
+        # Hook into closing event to minimize instead of quit
+        self.dashboard_window.events.closing += self._on_dashboard_closing
+
+        # Overlay Window (Hidden initially, frameless, transparent, on top)
+        # Note: Transparent windows might have platform specific issues.
+        # We use a separate window for the overlay.
+        overlay_url = f"{html_url}?view=overlay"
+        self.overlay_window = webview.create_window(
+            'GroqWhisper Overlay',
+            url=overlay_url,
+            width=300,
+            height=100,
+            frameless=True,
+            on_top=True,
+            transparent=True,
+            easy_drag=True,
+            js_api=self.api,
+            x=0, y=0 # Initial position, maybe update later
+        )
+        
+        # We hide overlay initially.
+        # Pywebview doesn't have a direct 'hide()' in create options for all platforms, 
+        # but we can try to hide it after load or position it off-screen.
+        # Best bet: Minimize / Hide.
+        # We'll use a timer to hide it once loaded or just rely on CSS 'hidden' if transparent allows simple click-through?
+        # No, window presence blocks clicks. We need to hide the window itself.
+        # We will hide it in the `run` method after a short delay or rely on API.
+        
+    def _on_dashboard_closing(self):
+        """Handle dashboard close event (quit app)."""
+        if self._shutdown_flag:
+            return True
+            
+        # Shutdown application
+        self.shutdown()
+        return True
 
     def _setup_hotkeys(self) -> None:
         """Setup global hotkey listener."""
-        # User requested: Ctrl+Alt+K for recording
-        recording_hotkey = '<ctrl>+<alt>+k'
-
+        recording_hotkey = '<ctrl>+<alt>+k' # Could be configurable
         try:
-            # pynput format: modifiers need to be in angle brackets, key doesn't
             hotkeys = {
-                recording_hotkey: self._on_hotkey_pressed,
-                '<ctrl>+<alt>+q': self._quit_wrapper,  # Quit hotkey
+                recording_hotkey: self.toggle_recording,
+                '<ctrl>+<alt>+q': self.shutdown_wrapper,
             }
             self.hotkey_listener = GlobalHotKeys(hotkeys)
             self.hotkey_listener.start()
-            print(f"Hotkeys registered:")
-            print(f"  {recording_hotkey} - Toggle recording")
-            print(f"  <ctrl>+<alt>+q - Quit application")
+            print(f"Hotkeys registered: {recording_hotkey}")
         except Exception as e:
             print(f"Warning: Could not register hotkeys: {e}")
-            print("The application will start but hotkey functionality may not work.")
-            self.hotkey_listener = None
 
-    def _quit_wrapper(self) -> None:
-        """Wrapper for shutdown from hotkey."""
-        print("Quit hotkey pressed...")
-        self.root.after(0, self.shutdown)
-
-    def _validate_api_key(self) -> None:
-        """Validate API key on startup, show settings if missing."""
-        api_key = self.config.get_api_key()
-        if not api_key:
-            print("No API key found. Opening settings...")
-            self.root.after(100, self._show_settings)
-
-    def _on_hotkey_pressed(self) -> None:
-        """Handle global hotkey press (toggle recording)."""
+    def toggle_recording(self) -> None:
+        """Toggle recording state."""
         if not self._is_recording:
             self._start_recording()
         else:
@@ -132,162 +152,192 @@ class GroqWhisperApp:
 
     def _start_recording(self) -> None:
         """Start audio recording."""
+        print("Starting recording...")
         self._is_recording = True
         self.sound.play_start_beep()
-
-        if self.config.show_overlay():
-            self.overlay.show()
-
-        self.recorder.start_recording()
-        self.tray.update_tooltip("Recording...")
-
-        # Update settings button if visible
-        if self._settings_window:
-            self.root.after(0, self._settings_window._update_recording_button)
+        
+        # Show overlay
+        if self.config.show_overlay() and self.overlay_window:
+            self.overlay_window.show()
+            
+        # Get configured input device
+        device_index = self.config.get_input_device()
+        if device_index == -1:
+            device_index = None
+            
+        print(f"Recording using device index: {device_index}")
+        
+        # Start recording
+        try:
+            self.recorder.start_recording(device_index=device_index)
+            self.tray.update_tooltip("Recording...")
+            self._update_ui_recording_state(True)
+        except Exception as e:
+            print(f"Error starting recorder: {e}")
+            self._is_recording = False
+            self.tray.update_tooltip("Error")
+            self._update_ui_recording_state(False)
 
     def _stop_recording(self) -> None:
-        """Stop recording and add to history (no auto-transcription)."""
-        # Stop recording and get audio file
+        """Stop recording and process."""
+        print("Stopping recording...")
         audio_file = self.recorder.stop_recording()
-
-        if not audio_file:
-            print("No audio file recorded.")
-            self._reset_state()
-            return
-
         self._is_recording = False
-        self.overlay.hide()
-
-        # Play stop beep
+        
+        # Hide overlay
+        if self.overlay_window:
+            self.overlay_window.hide()
+            
         self.sound.play_stop_beep()
-
-        # Add to history instead of auto-transcribing
-        recording_id = self.history.add_recording(audio_file)
-        print(f"[DEBUG] Recording saved to history: {recording_id}")
-        print(f"[DEBUG] History count: {self.history.get_count()}")
-
-        # Update settings button if visible
-        if self._settings_window:
-            self.root.after(0, self._settings_window._update_recording_button)
-            # Refresh history UI to show new recording
-            self.root.after(0, self._settings_window._refresh_history)
-
+        
+        if audio_file:
+            # Add to history
+            recording_id = self.history.add_recording(audio_file)
+            
+            # Update History UI
+            self._update_history_ui()
+            
+            # Transcribe (Async)
+            threading.Thread(target=self._process_transcription, args=(recording_id,), daemon=True).start()
+        
         self.tray.update_tooltip("Ready")
+        self._update_ui_recording_state(False)
 
-    def _reset_state(self) -> None:
-        """Reset recording state after error."""
-        self._is_recording = False
-        self.overlay.hide()
-        self.tray.update_tooltip("Ready")
+    def _process_transcription(self, recording_id):
+        """Handle transcription in background."""
+        recording = self.history.get_recording(recording_id)
+        if not recording:
+            return
+            
+        lang = self.config.get_language()
+        if lang == "auto":
+            lang = None
+            
+        text = self.transcriber.transcribe(recording.filepath, language=lang)
+        
+        if text:
+            self.history.update_transcript(recording_id, text)
+            self.injector.inject_text(text)
+            self._update_history_ui()
+        else:
+             print("Transcription failed.")
 
-    def _show_settings(self) -> None:
-        """Show the settings window."""
-        print("Opening settings...")
-        try:
-            # Use root.after() for thread-safe GUI update
-            self.root.after(0, self._show_settings_impl)
-        except Exception as e:
-            print(f"Error opening settings: {e}")
+    def process_file_transcription(self, filepath):
+        """Handle file transcription (called from API)."""
+        print(f"Processing file: {filepath}")
+        
+        # Add to history as FILE source
+        # Note: HistoryManager.add_recording default is SourceType.RECORDING.
+        # We need to import SourceType or use string/bool if HM supports it.
+        # Let's check history manager again or just pass filepath and update later.
+        # Ideally we update add_recording to accept source. 
+        # For now, let's just add it.
+        
+        # Check source type support in history manager
+        from models.recording import SourceType
+        recording_id = self.history.add_recording(filepath, source=SourceType.FILE)
+        
+        self._update_history_ui()
+        
+        # Transcribe
+        lang = self.config.get_language()
+        if lang == "auto":
+            lang = None
+            
+        text = self.transcriber.transcribe(filepath, language=lang)
+        
+        if text:
+            self.history.update_transcript(recording_id, text)
+            self.injector.inject_text(text)
+            self._update_history_ui()
+        else:
+            print("File transcription failed.")
 
-    def _show_settings_impl(self) -> None:
-        """Implementation of showing settings (runs on main thread)."""
-        try:
-            # SettingsWindow IS the main window - just show it
-            if self._settings_window and self._settings_window.winfo_exists():
-                print("Bringing settings window to front...")
-                self._settings_window.lift()
-                self._settings_window.focus_set()
-                self._settings_window.deiconify()
-            else:
-                print("Settings window not found - this shouldn't happen")
-        except Exception as e:
-            print(f"Error in settings impl: {e}")
+    def _update_ui_recording_state(self, is_recording):
+        """Notify JS about state."""
+        code = f"toggleRecordingState({str(is_recording).lower()})"
+        if self.dashboard_window:
+            self.dashboard_window.evaluate_js(code)
+        if self.overlay_window:
+            self.overlay_window.evaluate_js(code)
 
-    def _on_settings_close(self) -> None:
-        """Handle settings window close - minimize to tray."""
-        # The window is already withdrawn/hidden by SettingsWindow._on_window_close
-        print("Settings window minimized to tray.")
-
-    def run(self) -> None:
-        """Start the application main loop."""
-        print("GroqWhisper Desktop - Starting...")
-        print("Settings window will open on startup.")
-        print("=" * 50)
-
-        # Setup signal handlers for graceful shutdown
-        def signal_handler(sig, frame):
-            print("\nShutdown signal received...")
-            self.shutdown()
-
-        signal.signal(signal.SIGINT, signal_handler)
-        signal.signal(signal.SIGTERM, signal_handler)
-
-        # Start tray icon
-        self.tray.run()
-
-        # Run tkinter mainloop
-        try:
-            self.root.mainloop()
-        except KeyboardInterrupt:
-            print("\nKeyboard interrupt received...")
-            self.shutdown()
-
-    def shutdown(self) -> None:
-        """Clean shutdown of all components."""
-        if self._shutdown_flag:
-            return  # Already shutting down
-
-        self._shutdown_flag = True
-        print("\nGroqWhisper Desktop - Shutting down...")
-
-        try:
-            # Stop hotkey listener first
-            if hasattr(self, 'hotkey_listener') and self.hotkey_listener:
-                try:
-                    self.hotkey_listener.stop()
-                except:
-                    pass
-
-            # Stop tray icon
-            if hasattr(self, 'tray'):
-                try:
-                    self.tray.stop()
-                except:
-                    pass
-
-            # Cleanup temp files
-            if hasattr(self, 'recorder'):
-                try:
-                    self.recorder.cleanup_temp_files()
-                except:
-                    pass
-
-            # Quit tkinter mainloop
+    def _update_history_ui(self):
+        """Push history update to UI."""
+        history_data = self.api.get_history()
+        # We need to serialize for JS
+        import json
+        json_str = json.dumps(history_data)
+        code = f"updateHistory({json_str})"
+        
+        if self.dashboard_window:
+            # evaluate_js calls are thread-safe in pywebview usually, but if called from thread, 
+            # might need to ensure window is ready.
             try:
-                self.root.quit()
-            except:
-                pass
+                self.dashboard_window.evaluate_js(code)
+            except Exception as e:
+                print(f"Error updating UI: {e}")
 
-        except Exception as e:
-            print(f"Error during shutdown: {e}")
-        finally:
-            # Force exit if still running
-            import os
-            os._exit(0)
+    def reload_config(self):
+        """Reload configuration called from API."""
+        self.config.reload_env()
+        print("Config reloaded.")
 
-    def _cleanup(self) -> None:
-        """Cleanup callback for atexit."""
-        try:
+    def show_dashboard(self):
+        """Show dashboard window."""
+        if self.dashboard_window:
+            self.dashboard_window.show()
+            self.dashboard_window.restore()
+
+    def shutdown_wrapper(self):
+        """Wrapper for hotkey shutdown."""
+        # Use simple thread to not block hotkey listener
+        threading.Thread(target=self.shutdown).start()
+
+    def shutdown(self):
+        """Clean shutdown."""
+        if self._shutdown_flag:
+            return
+        self._shutdown_flag = True
+        print("Shutting down...")
+        
+        if hasattr(self, 'hotkey_listener') and self.hotkey_listener:
+            self.hotkey_listener.stop()
+            
+        if hasattr(self, 'tray'):
+            self.tray.stop()
+            
+        if hasattr(self, 'recorder'):
             self.recorder.cleanup_temp_files()
-        except:
-            pass
+            
+        # Pywebview windows close automatically on sys.exit usually, or we can explicit destroy
+        if self.dashboard_window:
+            self.dashboard_window.destroy()
+        if self.overlay_window:
+            self.overlay_window.destroy()
+            
+        sys.exit(0)
 
+    def run(self):
+        """Run the application."""
+        print("GroqWhisper Desktop - Starting Webview...")
+        
+        # Start Tray in background thread
+        threading.Thread(target=self.tray.run, daemon=True).start()
+
+        # Start Webview loop (Blocker)
+        # Since we created windows already, just calling start() works.
+        # We should hide overlay initially after a brief delay ensuring it's created.
+        
+        def initial_hide():
+            time.sleep(0.5)
+            if self.overlay_window:
+                self.overlay_window.hide()
+                
+        webview.start(func=initial_hide, debug=False)
 
 def main():
-    """Main application entry point."""
     app = GroqWhisperApp()
     app.run()
-
 
 if __name__ == "__main__":
     main()

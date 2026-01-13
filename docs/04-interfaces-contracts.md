@@ -95,33 +95,37 @@ If a task requires changing any contract:
 **Purpose:** Display recording status to user
 
 **Contract:**
-- **Window Type:** CTkToplevel (customtkinter)
+- **Window Type:** PyWebview Window (Edge/WebView2)
 - **Attributes:**
-  - `overrideredirect(True)` - Frameless window
-  - `attributes('-topmost', True)` - Always on top
-- **Visibility:** Shown when recording, hidden when idle
-- **Position:** Floating, draggable (optional)
+  - `frameless=True`
+  - `on_top=True`
+  - `transparent=True`
+- **Visibility:** Shown/Hidden via window management and JS state
+- **Position:** Floating, managed by OS window system
 - **Content:**
+  - HTML/CSS/JS based (Tailwind)
   - Microphone icon with pulse animation
-  - "Recording..." status text
-  - Waveform visualization bars
+  - "Listening..." status text
+  - Waveform visualization (CSS/JS)
 
 ---
 
 ### CFG-001: Settings Window Interface
-**Purpose:** User configuration and preferences
+**Purpose:** User configuration and preferences ("Dashboard")
 
 **Contract:**
-- **Window Type:** CTk (customtkinter main window)
+- **Window Type:** PyWebview Window (Dashboard View)
 - **Fields:**
-  - API Key (password entry, masked)
-  - Microphone dropdown (system audio devices)
-  - Hotkey display (read-only, configurable future)
-  - Beep sound toggle (on/off)
-  - Overlay visibility toggle (on/off)
+  - API Key (password entry)
+  - Microphone dropdown (populated via `get_microphones` API)
+  - Hotkey display (read-only)
+  - Beep sound toggle
+  - Overlay visibility toggle
 - **Actions:**
-  - Save: Apply changes to .env/config
-  - Cancel/Close: Discard unsaved changes
+  - Save: Calls `api.save_config()` -> updates .env
+  - Close: Minimizes to tray
+- **Technology:** HTML/JS/Tailwind CSS
+- **Bridge:** `pywebview.api` methods
 
 ---
 

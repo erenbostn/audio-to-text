@@ -168,6 +168,16 @@
     - File transcriptions now persist in history (no longer disappear on next transcription)
     - Users can select, copy, download, and delete file transcriptions like recordings
 
+- [2026-01-13] UI Refactor: PyWebview + Tailwind CSS
+  - What changed: Replaced CustomTkinter with PyWebview (Edge/WebView2) and Vanilla JS/Tailwind CSS
+  - Affected area: src/ui/index.html, src/main.py, src/core/api.py, requirements.txt
+  - Notes:
+    - Removed legacy UI files (overlay.py, settings_window.py)
+    - Implemented API bridge for JS <-> Python communication
+    - Created high-fidelity glassmorphism UI in index.html
+    - Updated contracts (UI-001, CFG-001) and requirements (NFR-004)
+    - Added input device configuration to config.py
+
 ---
 
 ## KNOWN ISSUES / UNKNOWNS (AI-maintained)
