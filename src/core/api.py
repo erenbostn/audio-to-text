@@ -16,8 +16,15 @@ class Api:
 
     def get_config(self) -> Dict[str, Any]:
         """Return current configuration."""
+        # Reload .env to clear cache (handles .env file changes during runtime)
+        self._config.reload_env()
+
+        # Get key length without exposing the actual key
+        api_key_length = self._config.get_api_key_length()
+
         return {
-            "api_key_exists": self._config.has_api_key(),
+            "api_key_exists": api_key_length > 0,
+            "api_key_length": api_key_length,
             "input_device_index": self._config.get_input_device(),
             "sound_enabled": self._config.play_beep(),
             "auto_paste_enabled": self._config.auto_paste_enabled(),

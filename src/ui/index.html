@@ -105,6 +105,30 @@
                 opacity: 0;
             }
         }
+
+        /* Hide browser password reveal icon (Chrome/Edge/Safari/Firefox) */
+        #apiKey::-ms-reveal,
+        #apiKey::-webkit-credentials-auto-fill-button {
+            display: none !important;
+        }
+
+        #apiKey::-ms-clear {
+            display: none !important;
+        }
+
+        /* iOS password toggle */
+        #apiKey::-webkit-caps-lock-indicator {
+            display: none;
+        }
+
+        /* Order badge for history selection */
+        .order-badge {
+            display: none;
+        }
+
+        .order-badge.visible {
+            display: flex;
+        }
     </style>
 </head>
 
@@ -180,7 +204,9 @@
                         <div class="flex gap-2">
                             <input type="password" id="apiKey"
                                 class="flex-1 bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all outline-none placeholder-gray-600"
-                                placeholder="Enter new API key (gsk_...)">
+                                placeholder="Enter new API key (gsk_...)"
+                                autocomplete="off"
+                                data-form-type="other">
                             <button onclick="saveApiKeyInstant()"
                                 class="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white text-sm font-medium rounded-lg transition-colors">
                                 Save
@@ -409,6 +435,14 @@
         document.body.classList.remove('bg-transparent');
         initDashboard();
 
+        // Input handler: masked iken yazmaya başlayınca temizle
+        document.getElementById('apiKey').addEventListener('input', function() {
+            if (this.getAttribute('data-masked') === 'true') {
+                this.value = '';
+                this.removeAttribute('data-masked');
+            }
+        });
+
         // --- DASHBOARD LOGIC ---
         async function initDashboard() {
             try {
@@ -431,17 +465,22 @@
         function populateConfig(config) {
             if (!config) return;
 
-            // Never populate API key field - always empty on load (security)
-            document.getElementById('apiKey').value = '';
-
-            // Show status message if key exists
             const statusEl = document.getElementById('apiKeyStatus');
+            const inputEl = document.getElementById('apiKey');
+
             if (config.api_key_exists) {
-                statusEl.textContent = '✓ API key is configured';
+                // Dinamik yıldız - key uzunluğu kadar (actual key değil)
+                const maskedKey = '*'.repeat(config.api_key_length || 0);
+                inputEl.value = maskedKey;
+                inputEl.setAttribute('data-masked', 'true');
+                statusEl.textContent = '✓ API key girildi';
                 statusEl.className = 'text-xs text-green-500 mt-1';
             } else {
-                statusEl.textContent = '⚠ No API key configured';
-                statusEl.className = 'text-xs text-yellow-500 mt-1';
+                // Key yok - boş + kırmızı uyarı
+                inputEl.value = '';
+                inputEl.removeAttribute('data-masked');
+                statusEl.textContent = '⚠ API key girilmelidir';
+                statusEl.className = 'text-xs text-red-500 mt-1';
             }
 
             document.getElementById('soundToggle').checked = config.sound_enabled !== false;
@@ -511,7 +550,14 @@
 
         // Instant API key save
         async function saveApiKeyInstant() {
-            const apiKey = document.getElementById('apiKey').value;
+            const inputEl = document.getElementById('apiKey');
+            const apiKey = inputEl.value;
+
+            // Eğer masked ise, yazmaya başlamak için input'u temizleyin uyarısı
+            if (inputEl.getAttribute('data-masked') === 'true') {
+                showToast('⚠ Mevcut key\'i değiştirmek için input\'a yazmaya başlayın', 'info');
+                return;
+            }
 
             if (!apiKey || !apiKey.trim()) {
                 showToast('⚠ Please enter an API key', 'error');
@@ -525,10 +571,12 @@
 
             try {
                 await pywebview.api.save_api_key(apiKey);
-                // Clear the input field immediately after save
-                document.getElementById('apiKey').value = '';
-                // Update status message
-                document.getElementById('apiKeyStatus').textContent = '✓ API key saved successfully';
+                // Dinamik masked göster - key uzunluğu kadar yıldız
+                const maskedKey = '*'.repeat(apiKey.length);
+                inputEl.value = maskedKey;
+                inputEl.setAttribute('data-masked', 'true');
+                // Status güncelle
+                document.getElementById('apiKeyStatus').textContent = '✓ API key girildi';
                 document.getElementById('apiKeyStatus').className = 'text-xs text-green-500 mt-1';
                 showToast('🔑 API Key saved', 'success');
             } catch (error) {
@@ -581,6 +629,8 @@
 
         // Store history data globally for batch operations
         let currentHistoryItems = [];
+        // Track selection order (sequence of IDs as user clicks them)
+        let selectionOrder = [];
 
         function updateHistory(historyData) {
             renderHistory(historyData);
@@ -589,6 +639,7 @@
         function renderHistory(historyItems) {
             const container = document.getElementById('historyList');
             currentHistoryItems = historyItems || [];
+            selectionOrder = [];  // Reset selection order
 
             if (!historyItems || historyItems.length === 0) {
                 container.innerHTML = '<div class="text-center py-8 text-gray-600 text-sm">No recordings yet</div>';
@@ -604,10 +655,11 @@
             document.getElementById('selectAllCheckbox').classList.remove('hidden');
 
             container.innerHTML = historyItems.map((item, index) => `
-                <div class="bg-gray-800/40 border border-gray-700/50 rounded-lg p-3 hover:border-gray-600 transition-colors group" data-id="${item.id}">
+                <div class="bg-gray-800/40 border border-gray-700/50 rounded-lg p-3 hover:border-gray-600 transition-colors group relative" data-id="${item.id}">
                     <div class="flex items-start gap-3">
-                        <input type="checkbox" class="item-checkbox w-4 h-4 mt-1 rounded border-gray-600 bg-gray-700 text-orange-500 focus:ring-offset-gray-900 focus:ring-orange-500" 
+                        <input type="checkbox" class="item-checkbox w-4 h-4 mt-1 rounded border-gray-600 bg-gray-700 text-orange-500 focus:ring-offset-gray-900 focus:ring-orange-500"
                             data-id="${item.id}" onchange="updateSelection()">
+                        <div class="order-badge hidden absolute top-2 right-2 w-6 h-6 bg-orange-600 text-white text-xs font-bold rounded-full flex items-center justify-center"></div>
                         <div class="flex-1">
                             <div class="flex justify-between items-start mb-2">
                                 <div class="text-xs text-gray-500 font-mono">${item.timestamp}</div>
@@ -615,9 +667,9 @@
                                     <button onclick="copyText('${item.id}')" class="text-xs text-blue-400 hover:text-blue-300">Copy</button>
                                 </div>
                             </div>
-                            <textarea id="text-${item.id}" 
+                            <textarea id="text-${item.id}"
                                 class="w-full bg-transparent text-sm text-gray-200 leading-relaxed font-light resize-none outline-none ${isEditable ? 'border border-gray-600 rounded p-1' : ''}"
-                                rows="2" 
+                                rows="2"
                                 ${isEditable ? '' : 'readonly'}
                                 onblur="updateHistoryText('${item.id}', this.value)">${item.text}</textarea>
                         </div>
@@ -699,8 +751,48 @@
         // Update selection state and show/hide bulk actions
         function updateSelection() {
             const checkboxes = document.querySelectorAll('.item-checkbox');
-            const checked = document.querySelectorAll('.item-checkbox:checked');
+            const checked = Array.from(document.querySelectorAll('.item-checkbox:checked'));
             const count = checked.length;
+
+            // === Track selection order ===
+            const checkedIds = checked.map(cb => cb.dataset.id);
+
+            // Find newly checked items (not in selectionOrder)
+            const newlyChecked = checkedIds.filter(id => !selectionOrder.includes(id));
+            const newlyUnchecked = selectionOrder.filter(id => !checkedIds.includes(id));
+
+            // Add newly checked items to end of selectionOrder
+            newlyChecked.forEach(id => {
+                selectionOrder.push(id);
+            });
+
+            // Remove unchecked items from selectionOrder
+            newlyUnchecked.forEach(id => {
+                const index = selectionOrder.indexOf(id);
+                if (index > -1) {
+                    selectionOrder.splice(index, 1);
+                }
+            });
+
+            // === Update order badges ===
+            // Hide all badges first
+            document.querySelectorAll('.order-badge').forEach(badge => {
+                badge.classList.add('hidden');
+                badge.classList.remove('visible');
+            });
+
+            // Show and number badges for selected items
+            selectionOrder.forEach((id, index) => {
+                const itemContainer = document.querySelector(`[data-id="${id}"]`);
+                if (itemContainer) {
+                    const badge = itemContainer.querySelector('.order-badge');
+                    if (badge) {
+                        badge.textContent = index + 1;  // 1-indexed
+                        badge.classList.remove('hidden');
+                        badge.classList.add('visible');
+                    }
+                }
+            });
 
             const bulkBar = document.getElementById('bulkActionsBar');
             const countSpan = document.getElementById('selectedCount');
@@ -723,25 +815,36 @@
         // Toggle Select All
         function toggleSelectAll() {
             const selectAll = document.getElementById('selectAllCheckbox');
+            const isChecked = selectAll.checked;
+
             const checkboxes = document.querySelectorAll('.item-checkbox');
-            checkboxes.forEach(cb => cb.checked = selectAll.checked);
+            checkboxes.forEach(cb => cb.checked = isChecked);
+
+            if (isChecked) {
+                // Set selection order to displayed order (top to bottom)
+                selectionOrder = Array.from(checkboxes).map(cb => cb.dataset.id);
+            } else {
+                selectionOrder = [];
+            }
+
             updateSelection();
         }
 
-        // Get selected item IDs
+        // Get selected item IDs in selection order
         function getSelectedIds() {
-            const checked = document.querySelectorAll('.item-checkbox:checked');
-            return Array.from(checked).map(cb => cb.dataset.id);
+            // Return IDs in selection order, not DOM order
+            return [...selectionOrder];  // Return copy to prevent mutation
         }
 
         // Merge selected items into a new history entry
         async function mergeSelected() {
-            const selectedIds = getSelectedIds();
+            const selectedIds = getSelectedIds();  // Already ordered by selection
             if (selectedIds.length === 0) return;
 
-            // Get texts in order (oldest first based on array order which is newest first, so reverse)
-            const selectedItems = currentHistoryItems.filter(item => selectedIds.includes(item.id));
-            selectedItems.reverse(); // Oldest first
+            // Get items in SELECTION ORDER (not chronological)
+            const selectedItems = selectedIds.map(id => {
+                return currentHistoryItems.find(item => item.id === id);
+            }).filter(Boolean);  // Remove any undefined
 
             // Get current text from textareas (in case edited)
             const texts = selectedItems.map(item => {
@@ -758,10 +861,11 @@
             const history = await pywebview.api.get_history();
             renderHistory(history);
 
-            // Uncheck all
+            // Reset selection
             document.getElementById('selectAllCheckbox').checked = false;
+            selectionOrder = [];  // Clear selection order
 
-            showToast(`🔗 Merged ${selectedIds.length} items`, 'success');
+            showToast(`🔗 Merged ${selectedIds.length} items in order`, 'success');
         }
 
         // Delete selected items

@@ -42,6 +42,20 @@ class Config:
         api_key = os.getenv("GROQ_API_KEY")
         return bool(api_key and api_key.strip() and api_key != "your_groq_api_key_here")
 
+    def get_api_key_length(self) -> int:
+        """
+        Get API key length without exposing the key itself.
+
+        Returns:
+            Length of the API key, or 0 if no key is configured.
+
+        Security: This method returns only the length, not the actual key value.
+        """
+        api_key = os.getenv("GROQ_API_KEY")
+        if api_key and api_key.strip() and api_key != "your_groq_api_key_here":
+            return len(api_key)
+        return 0
+
     def save_api_key(self, api_key: str) -> None:
         """
         Save Groq API key to .env file.
