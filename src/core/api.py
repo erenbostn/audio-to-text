@@ -113,6 +113,11 @@ class Api:
         """Copy text to system clipboard."""
         pyperclip.copy(text)
 
+    def update_history_text(self, recording_id: str, new_text: str) -> None:
+        """Update transcript text for a history item (edit mode)."""
+        self._history.update_transcript(recording_id, new_text)
+        print(f"[API] Updated history text for {recording_id}")
+
     def toggle_recording(self) -> None:
         """Toggle recording state manually from UI."""
         # Run in thread to avoid blocking UI

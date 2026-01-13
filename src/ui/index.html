@@ -252,14 +252,14 @@
                         </label>
                         <label
                             class="flex flex-col items-center p-3 bg-gray-800/30 border border-gray-700 rounded-lg cursor-pointer hover:bg-gray-800/50 transition-colors">
-                            <span class="text-xs font-medium text-gray-400 mb-2">On Top</span>
-                            <input type="checkbox" id="alwaysOnTopToggle"
+                            <span class="text-xs font-medium text-gray-400 mb-2">Translate</span>
+                            <input type="checkbox" id="translateToggle"
                                 class="w-4 h-4 rounded border-gray-600 bg-gray-700 text-orange-500 focus:ring-offset-gray-900 focus:ring-orange-500">
                         </label>
                         <label
                             class="flex flex-col items-center p-3 bg-gray-800/30 border border-gray-700 rounded-lg cursor-pointer hover:bg-gray-800/50 transition-colors">
-                            <span class="text-xs font-medium text-gray-400 mb-2">Translate</span>
-                            <input type="checkbox" id="translateToggle"
+                            <span class="text-xs font-medium text-gray-400 mb-2">Edit</span>
+                            <input type="checkbox" id="allowEditToggle" onchange="toggleEditMode()"
                                 class="w-4 h-4 rounded border-gray-600 bg-gray-700 text-orange-500 focus:ring-offset-gray-900 focus:ring-orange-500">
                         </label>
                     </div>
@@ -414,7 +414,6 @@
             document.getElementById('apiKey').value = config.api_key || '';
             document.getElementById('soundToggle').checked = config.sound_enabled !== false;
             document.getElementById('autoPasteToggle').checked = config.auto_paste_enabled !== false;
-            document.getElementById('alwaysOnTopToggle').checked = config.always_on_top === true;
             document.getElementById('translateToggle').checked = config.translate_enabled === true;
             if (config.language) {
                 document.getElementById('langSelect').value = config.language;
@@ -451,7 +450,6 @@
                 input_device_index: document.getElementById('micSelect').value,
                 sound_enabled: document.getElementById('soundToggle').checked,
                 auto_paste_enabled: document.getElementById('autoPasteToggle').checked,
-                always_on_top: document.getElementById('alwaysOnTopToggle').checked,
                 translate_enabled: document.getElementById('translateToggle').checked,
                 language: document.getElementById('langSelect').value
             };
@@ -519,8 +517,9 @@
                 return;
             }
 
+            const isEditable = document.getElementById('allowEditToggle')?.checked || false;
             document.getElementById('clearBtn').classList.remove('hidden');
-            // Assuming newest first in list
+
             container.innerHTML = historyItems.map((item, index) => `
                 <div class="bg-gray-800/40 border border-gray-700/50 rounded-lg p-3 hover:border-gray-600 transition-colors group">
                     <div class="flex justify-between items-start mb-2">
@@ -529,14 +528,45 @@
                             <button onclick="copyText('${item.id}')" class="text-xs text-blue-400 hover:text-blue-300">Copy</button>
                         </div>
                     </div>
-                    <div id="text-${item.id}" class="text-sm text-gray-200 leading-relaxed font-light break-words">${item.text}</div>
+                    <textarea id="text-${item.id}" 
+                        class="w-full bg-transparent text-sm text-gray-200 leading-relaxed font-light resize-none outline-none ${isEditable ? 'border border-gray-600 rounded p-1' : ''}"
+                        rows="2" 
+                        ${isEditable ? '' : 'readonly'}
+                        onblur="updateHistoryText('${item.id}', this.value)">${item.text}</textarea>
                 </div>
             `).join('');
         }
 
+        // Toggle edit mode for history textareas
+        function toggleEditMode() {
+            const isEditable = document.getElementById('allowEditToggle').checked;
+            const textareas = document.querySelectorAll('#historyList textarea');
+
+            textareas.forEach(ta => {
+                if (isEditable) {
+                    ta.removeAttribute('readonly');
+                    ta.classList.add('border', 'border-gray-600', 'rounded', 'p-1');
+                } else {
+                    ta.setAttribute('readonly', true);
+                    ta.classList.remove('border', 'border-gray-600', 'rounded', 'p-1');
+                }
+            });
+
+            showToast(isEditable ? '✏️ Edit mode enabled' : '🔒 Edit mode disabled', 'info');
+        }
+
+        // Auto-save edited history text
+        async function updateHistoryText(id, newText) {
+            const isEditable = document.getElementById('allowEditToggle')?.checked;
+            if (isEditable && newText) {
+                await pywebview.api.update_history_text(id, newText);
+            }
+        }
+
         async function copyText(id) {
-            const text = document.getElementById(`text-${id}`).innerText;
+            const text = document.getElementById(`text-${id}`).value;
             await pywebview.api.copy_to_clipboard(text);
+            showToast('✅ Copied to clipboard', 'success');
         }
 
         async function uploadFile() {
