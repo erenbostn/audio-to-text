@@ -8,6 +8,38 @@
 
 ---
 
+## 🖼️ Demo Videoları
+
+### 🎙️ Global Hotkey ile Anında Kayıt
+<video src="https://github.com/user-attachments/assets/9a00f85d-d7c1-42c1-8f20-f93cb0dcb603"
+       controls
+       muted
+       playsinline
+       width="100%">
+</video>
+
+---
+
+### 📁 Dosya Yükleme ve Otomatik Parçalama
+<video src="https://github.com/user-attachments/assets/552a1c1f-8204-49d3-88c7-710476f434b1"
+       controls
+       muted
+       playsinline
+       width="100%">
+</video>
+
+---
+
+### 📜 History, Merge ve Düzenleme Modu
+<video src="https://github.com/user-attachments/assets/076bc714-9a16-4446-a3fb-a4101425f3e5"
+       controls
+       muted
+       playsinline
+       width="100%">
+</video>
+
+
+
 ## 📋 İçindekiler
 
 - [Özellikler](#-özellikler)
