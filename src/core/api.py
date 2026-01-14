@@ -116,11 +116,33 @@ class Api:
         try:
             devices = sd.query_devices()
             mics = []
+            seen_names = set()  # Track seen names to avoid duplicates
+            
+            # Keywords to filter out virtual/loopback/non-mic devices
+            exclude_keywords = [
+                'loopback', 'monitor', 'stereo mix', 'what u hear', 'wave out',
+                'birincil ses', 'primary sound', 'ses eşleştiricisi', 'sound mapper',
+                'hat girişi', 'line input', 'stereo karışımı', 'stereo input',
+                'digital input', 'spdif', 'hdmi'
+            ]
+            
             for i, device in enumerate(devices):
                 if device['max_input_channels'] > 0:
+                    name = device['name']
+                    name_lower = name.lower()
+                    
+                    # Skip virtual/loopback devices
+                    if any(kw in name_lower for kw in exclude_keywords):
+                        continue
+                    
+                    # Skip duplicates (same name)
+                    if name in seen_names:
+                        continue
+                    seen_names.add(name)
+                    
                     mics.append({
-                        "index": i,  # Use index for selection
-                        "name": device['name']
+                        "index": i,
+                        "name": name
                     })
             return mics
         except Exception as e:

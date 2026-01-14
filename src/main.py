@@ -255,9 +255,12 @@ class GroqWhisperApp:
         4. User manually merges using existing merge button
         """
         from models.recording import SourceType
+        import time
+
+        # Track total transcription time
+        workflow_start_time = time.time()
 
         # Generate recording ID for the split job
-        import time
         recording_id = str(int(time.time() * 1000))
 
         print(f"[SPLIT] Starting split workflow for: {filepath}")
@@ -385,12 +388,38 @@ class GroqWhisperApp:
         # Hide progress modal
         self._evaluate_js("if (typeof hideSplitProgress === 'function') { hideSplitProgress(); }")
 
+        # Calculate total transcription time
+        workflow_end_time = time.time()
+        total_transcription_seconds = workflow_end_time - workflow_start_time
+        
+        # Update meta.json with transcription time
+        try:
+            import json
+            from pathlib import Path
+            meta_path = Path("temp") / f"{recording_id}_job_meta.json"
+            if meta_path.exists():
+                with open(meta_path, 'r', encoding='utf-8') as f:
+                    metadata = json.load(f)
+                
+                metadata['total_transcription_seconds'] = round(total_transcription_seconds, 2)
+                metadata['total_transcription_formatted'] = f"{int(total_transcription_seconds // 60)}:{int(total_transcription_seconds % 60):02d}"
+                metadata['transcription_completed_at'] = time.strftime("%d.%m.%Y %H:%M:%S")
+                metadata['success_count'] = success_count
+                metadata['failed_count'] = len(failed_chunks)
+                
+                with open(meta_path, 'w', encoding='utf-8') as f:
+                    json.dump(metadata, f, indent=2, ensure_ascii=False)
+                
+                print(f"[SPLIT] Total transcription time: {total_transcription_seconds:.2f} seconds")
+        except Exception as e:
+            print(f"[SPLIT] Warning: Could not update meta.json: {e}")
+
         if failed_chunks:
             print(f"[SPLIT] Failed chunks: {failed_chunks}")
             self._show_toast(f"⚠️ {success_count}/{len(chunk_recordings)} parça transcribe edildi. Başarısız: {failed_chunks}", "warning")
         else:
             print(f"[SPLIT] All {len(chunk_recordings)} chunks transcribed successfully")
-            self._show_toast("✅ Tüm parçalar transcribe edildi. Merge etmek için seçin.", "success")
+            self._show_toast(f"✅ Tüm parçalar transcribe edildi ({int(total_transcription_seconds)}s). Merge etmek için seçin.", "success")
 
         self._update_history_ui()
 

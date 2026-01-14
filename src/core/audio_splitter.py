@@ -14,7 +14,7 @@ class AudioSplitter:
 
     # Constants
     CHUNK_DURATION_SECONDS = 240  # 4 minutes (reduced from 10 to stay under 25MB)
-    OVERLAP_SECONDS = 10
+    OVERLAP_SECONDS = 3
     MAX_PART_DURATION_SECONDS = 900  # 15 minutes (API safety)
 
     def __init__(self, temp_dir: str = "temp"):
@@ -165,7 +165,7 @@ class AudioSplitter:
             "total_parts": len(chunks),
             "chunk_duration_seconds": self.CHUNK_DURATION_SECONDS,
             "overlap_seconds": self.OVERLAP_SECONDS,
-            "created_at": datetime.now().isoformat(),
+            "created_at": datetime.now().strftime("%d.%m.%Y %H:%M:%S"),
             "original_filename": Path(filepath).name,
             "original_recording_id": recording_id,
             "chunks": chunks,
