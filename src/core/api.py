@@ -245,9 +245,16 @@ class Api:
         transcriber = GroqTranscriber(self._config.get_api_key())
         duration_seconds = transcriber.get_audio_duration(filepath)
 
-        # Also check file size - if > 50 MB, force split regardless of duration
+        # Check file size - Groq API limit is 25 MB, so split if > 24 MB
         file_size_mb = Path(filepath).stat().st_size / (1024 * 1024)
-        force_split_by_size = file_size_mb > 50
+        force_split_by_size = file_size_mb > 24  # Changed from 50 to 24 MB
+
+        # If duration is 0 (couldn't read), use file size as fallback indicator
+        # Assume ~1 MB per minute for compressed audio
+        if duration_seconds == 0 and file_size_mb > 10:
+            # Can't determine duration, but file is large - suggest split
+            force_split_by_size = True
+            print(f"[WARNING] Could not determine duration, using file size ({file_size_mb:.1f} MB) to decide split")
 
         return {
             "duration_seconds": duration_seconds,

@@ -269,6 +269,12 @@ class GroqWhisperApp:
         try:
             job_metadata = self.api.split_audio_file(filepath, recording_id)
             print(f"[SPLIT] Created {job_metadata['total_parts']} chunks")
+        except ValueError as e:
+            # User-friendly error (format not supported, etc.)
+            print(f"[SPLIT] Error: {e}")
+            self._evaluate_js("if (typeof hideSplitProgress === 'function') { hideSplitProgress(); }")
+            self._show_toast(f"❌ {e}", "error")
+            return
         except Exception as e:
             print(f"[SPLIT] Error splitting file: {e}")
             self._evaluate_js("if (typeof hideSplitProgress === 'function') { hideSplitProgress(); }")
@@ -481,19 +487,33 @@ class GroqWhisperApp:
         print("Shutting down...")
         
         if hasattr(self, 'hotkey_listener') and self.hotkey_listener:
-            self.hotkey_listener.stop()
+            try:
+                self.hotkey_listener.stop()
+            except:
+                pass
             
         if hasattr(self, 'tray'):
-            self.tray.stop()
+            try:
+                self.tray.stop()
+            except:
+                pass
             
         if hasattr(self, 'recorder'):
-            self.recorder.cleanup_temp_files()
+            try:
+                self.recorder.cleanup_temp_files()
+            except:
+                pass
             
-        # Pywebview windows close automatically on sys.exit usually, or we can explicit destroy
+        # Pywebview windows - destroy in try-except to avoid threading errors
         if self.dashboard_window:
-            self.dashboard_window.destroy()
-            
-        sys.exit(0)
+            try:
+                self.dashboard_window.destroy()
+            except:
+                pass
+        
+        # Use os._exit to force clean exit without traceback
+        import os
+        os._exit(0)
 
     def run(self):
         """Run the application."""

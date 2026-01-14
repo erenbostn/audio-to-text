@@ -66,11 +66,25 @@ class AudioSplitter:
         import soundfile as sf
         import wave
 
+        # Check file format - soundfile doesn't support m4a/aac
+        file_ext = Path(filepath).suffix.lower()
+        unsupported_formats = ['.m4a', '.aac', '.mp4']
+        
+        if file_ext in unsupported_formats:
+            raise ValueError(
+                f"M4A/AAC formatı parçalama için desteklenmiyor. "
+                f"Lütfen dosyayı MP3 veya WAV formatına dönüştürün. "
+                f"(Online converter: cloudconvert.com)"
+            )
+
         # Read the audio file
-        with sf.SoundFile(filepath) as audio_file:
-            samplerate = audio_file.samplerate
-            total_frames = len(audio_file)
-            audio_data = audio_file.read(dtype="float32")
+        try:
+            with sf.SoundFile(filepath) as audio_file:
+                samplerate = audio_file.samplerate
+                total_frames = len(audio_file)
+                audio_data = audio_file.read(dtype="float32")
+        except Exception as e:
+            raise ValueError(f"Dosya okunamadı. Desteklenen formatlar: WAV, MP3, FLAC, OGG. Hata: {e}")
 
         # Convert to mono if stereo
         if len(audio_data.shape) > 1:

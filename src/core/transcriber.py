@@ -94,11 +94,25 @@ class GroqTranscriber:
         file_ext = Path(filepath).suffix.lower()
         print(f"[DEBUG] Getting duration for: {filepath} (format: {file_ext})")
 
-        # Try mutagen first for common formats (more reliable)
+        # Special handling for m4a files
+        if file_ext in ['.m4a', '.mp4', '.aac']:
+            try:
+                from mutagen.mp4 import MP4
+                audio = MP4(filepath)
+                if audio.info is not None:
+                    duration = audio.info.length
+                    print(f"[DEBUG] Duration from mutagen.mp4: {duration:.2f} seconds")
+                    return duration
+            except ImportError:
+                print("[WARNING] mutagen.mp4 not available")
+            except Exception as e:
+                print(f"[DEBUG] mutagen.mp4 failed for m4a: {e}")
+
+        # Try mutagen for other formats (mp3, wav, flac, ogg)
         try:
             from mutagen import File as MutagenFile
             audio = MutagenFile(filepath)
-            if audio is not None and audio.info is not None:
+            if audio is not None and audio.info is not None and audio.info.length > 0:
                 duration = audio.info.length
                 print(f"[DEBUG] Duration from mutagen: {duration:.2f} seconds")
                 return duration

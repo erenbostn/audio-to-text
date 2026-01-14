@@ -81,7 +81,7 @@
 
         /* Toast notifications */
         .toast {
-            animation: slideIn 0.3s ease, fadeOut 0.3s ease 2.7s forwards;
+            animation: slideIn 0.3s ease;
         }
 
         @keyframes slideIn {
@@ -731,15 +731,16 @@
                 type === 'info' ? 'bg-blue-600' :
                     type === 'error' ? 'bg-red-600' : 'bg-gray-700';
 
-            toast.className = `toast ${bgColor} text-white px-4 py-2 rounded-lg shadow-lg text-sm font-medium`;
+            toast.className = `toast ${bgColor} text-white px-4 py-3 rounded-lg shadow-lg text-sm font-medium max-w-sm`;
             toast.textContent = message;
 
             container.appendChild(toast);
 
-            // Remove after animation
+            // Error messages stay longer (8s), others 5s
+            const duration = type === 'error' ? 8000 : 5000;
             setTimeout(() => {
                 toast.remove();
-            }, 3000);
+            }, duration);
         }
 
         // Expose showToast to window for Python access
