@@ -91,25 +91,34 @@ class GroqTranscriber:
         Returns:
             Duration in seconds
         """
-        # Try soundfile first (for wav, mp3, flac, ogg)
+        file_ext = Path(filepath).suffix.lower()
+        print(f"[DEBUG] Getting duration for: {filepath} (format: {file_ext})")
+
+        # Try mutagen first for common formats (more reliable)
+        try:
+            from mutagen import File as MutagenFile
+            audio = MutagenFile(filepath)
+            if audio is not None and audio.info is not None:
+                duration = audio.info.length
+                print(f"[DEBUG] Duration from mutagen: {duration:.2f} seconds")
+                return duration
+        except ImportError:
+            print("[WARNING] mutagen not installed, trying soundfile...")
+        except Exception as e:
+            print(f"[DEBUG] mutagen failed: {e}, trying soundfile...")
+
+        # Fallback to soundfile (for wav files mainly)
         try:
             import soundfile as sf
             with sf.SoundFile(filepath) as audio_file:
                 frames = len(audio_file)
                 samplerate = audio_file.samplerate
-                return frames / samplerate
-        except Exception:
-            # Fallback to mutagen for m4a and other formats
-            try:
-                from mutagen.mp4 import MP4
-                audio = MP4(filepath)
-                return audio.info.length
-            except ImportError:
-                print(f"[WARNING] mutagen not installed. Cannot get duration for: {filepath}")
-                return 0.0
-            except Exception as e:
-                print(f"[ERROR] Failed to get duration with mutagen: {e}")
-                return 0.0
+                duration = frames / samplerate
+                print(f"[DEBUG] Duration from soundfile: {duration:.2f} seconds")
+                return duration
+        except Exception as e:
+            print(f"[ERROR] soundfile failed: {e}")
+            return 0.0
 
     def transcribe(self, audio_file_path: str, language: Optional[str] = "tr", translate: bool = False) -> Optional[str]:
         """

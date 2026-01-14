@@ -146,13 +146,58 @@
     <!-- Toast Container -->
     <div id="toastContainer" class="fixed top-4 right-4 z-50 space-y-2"></div>
 
+    <!-- File Confirmation Modal (NEW) -->
+    <div id="fileConfirmModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+        <div class="bg-gray-800 border border-gray-700 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold text-white">Dosya Seçildi</h3>
+                    <p id="fileConfirmName" class="text-sm text-gray-400 truncate max-w-xs"></p>
+                </div>
+            </div>
+
+            <div id="fileConfirmDetails" class="bg-gray-900/50 rounded-lg p-4 mb-4">
+                <div class="grid grid-cols-2 gap-2 text-sm">
+                    <div class="text-gray-400">Süre:</div>
+                    <div id="fileConfirmDuration" class="text-white font-medium">-</div>
+                    <div class="text-gray-400">Boyut:</div>
+                    <div id="fileConfirmSize" class="text-white font-medium">-</div>
+                </div>
+            </div>
+
+            <div class="flex gap-3">
+                <button onclick="cancelFileConfirm()"
+                    class="flex-1 px-4 py-2.5 bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium rounded-lg transition-colors">
+                    İptal
+                </button>
+                <button onclick="startTranscription()"
+                    class="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Transcribe
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Split Confirmation Modal -->
     <div id="splitModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
         <div class="bg-gray-800 border border-gray-700 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
             <div class="flex items-center gap-3 mb-4">
                 <div class="w-10 h-10 bg-orange-500/20 rounded-lg flex items-center justify-center">
                     <svg class="w-6 h-6 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
                     </svg>
                 </div>
                 <div>
@@ -162,7 +207,8 @@
             </div>
 
             <div class="bg-gray-900/50 rounded-lg p-4 mb-4">
-                <p class="text-sm text-gray-300 mb-3">Bu dosya <span class="text-orange-400 font-semibold">çok büyük</span>. Parçalara bölünsün mü?</p>
+                <p class="text-sm text-gray-300 mb-3">Bu dosya <span class="text-orange-400 font-semibold">çok
+                        büyük</span>. Parçalara bölünsün mü?</p>
                 <ul class="text-xs text-gray-400 space-y-1">
                     <li>• Her parça: 4 dakika</li>
                     <li>• Overlap: 10 saniye (bağlam koruması)</li>
@@ -172,10 +218,12 @@
             </div>
 
             <div class="flex gap-3">
-                <button onclick="cancelSplit()" class="flex-1 px-4 py-2.5 bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium rounded-lg transition-colors">
+                <button onclick="cancelSplit()"
+                    class="flex-1 px-4 py-2.5 bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium rounded-lg transition-colors">
                     İptal
                 </button>
-                <button onclick="confirmSplit()" class="flex-1 px-4 py-2.5 bg-orange-600 hover:bg-orange-500 text-white text-sm font-medium rounded-lg transition-colors">
+                <button onclick="confirmSplit()"
+                    class="flex-1 px-4 py-2.5 bg-orange-600 hover:bg-orange-500 text-white text-sm font-medium rounded-lg transition-colors">
                     Parçala ve Transcribe Et
                 </button>
             </div>
@@ -194,7 +242,8 @@
                     <span id="overallProgressPercent">0%</span>
                 </div>
                 <div class="w-full bg-gray-700 rounded-full h-3">
-                    <div id="overallProgressBar" class="bg-blue-500 h-3 rounded-full transition-all duration-300" style="width: 0%"></div>
+                    <div id="overallProgressBar" class="bg-blue-500 h-3 rounded-full transition-all duration-300"
+                        style="width: 0%"></div>
                 </div>
             </div>
 
@@ -275,9 +324,7 @@
                         <div class="flex gap-2">
                             <input type="password" id="apiKey"
                                 class="flex-1 bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all outline-none placeholder-gray-600"
-                                placeholder="Enter new API key (gsk_...)"
-                                autocomplete="off"
-                                data-form-type="other">
+                                placeholder="Enter new API key (gsk_...)" autocomplete="off" data-form-type="other">
                             <button onclick="saveApiKeyInstant()"
                                 class="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white text-sm font-medium rounded-lg transition-colors">
                                 Save
@@ -507,7 +554,7 @@
         initDashboard();
 
         // Input handler: masked iken yazmaya başlayınca temizle
-        document.getElementById('apiKey').addEventListener('input', function() {
+        document.getElementById('apiKey').addEventListener('input', function () {
             if (this.getAttribute('data-masked') === 'true') {
                 this.value = '';
                 this.removeAttribute('data-masked');
@@ -708,7 +755,7 @@
         }
 
         // Update a single chunk item without full re-render (called during split workflow)
-        window.updateSingleChunkItem = function(chunkData) {
+        window.updateSingleChunkItem = function (chunkData) {
             // Find the textarea for this chunk
             const textarea = document.getElementById(`text-${chunkData.id}`);
             const collapsedDiv = document.getElementById(`collapsed-${chunkData.id}`);
@@ -1126,6 +1173,7 @@
         // === Split & Transcribe Workflow ===
 
         let pendingFileForSplit = null;
+        let pendingFileInfo = null;  // Store file info for confirmation modal
 
         async function uploadFileWithSplitCheck() {
             const filepath = await pywebview.api.select_file();
@@ -1134,6 +1182,43 @@
 
             // Check duration and file size
             const durationCheck = await pywebview.api.check_file_duration(filepath);
+
+            // Extract filename from path
+            const filename = filepath.split(/[\\/]/).pop();
+
+            // Format duration
+            let durationText = '-';
+            if (durationCheck.duration_seconds > 0) {
+                const mins = Math.floor(durationCheck.duration_seconds / 60);
+                const secs = Math.floor(durationCheck.duration_seconds % 60);
+                durationText = `${mins}:${secs.toString().padStart(2, '0')}`;
+            }
+
+            // Store file info
+            pendingFileInfo = {
+                filepath: filepath,
+                durationCheck: durationCheck
+            };
+
+            // Show file confirmation modal
+            document.getElementById('fileConfirmName').textContent = filename;
+            document.getElementById('fileConfirmDuration').textContent = durationText;
+            document.getElementById('fileConfirmSize').textContent = `${durationCheck.file_size_mb.toFixed(1)} MB`;
+            document.getElementById('fileConfirmModal').classList.remove('hidden');
+        }
+
+        function cancelFileConfirm() {
+            pendingFileInfo = null;
+            document.getElementById('fileConfirmModal').classList.add('hidden');
+        }
+
+        async function startTranscription() {
+            if (!pendingFileInfo) return;
+
+            const { filepath, durationCheck } = pendingFileInfo;
+
+            // Hide file confirmation modal
+            document.getElementById('fileConfirmModal').classList.add('hidden');
 
             if (durationCheck.should_split) {
                 // Show split confirmation modal
@@ -1147,8 +1232,11 @@
                 document.getElementById('splitModal').classList.remove('hidden');
             } else {
                 // Normal transcription
+                showToast('🎙️ Transcribe başlatılıyor...', 'info');
                 await pywebview.api.transcribe_file(filepath);
             }
+
+            pendingFileInfo = null;
         }
 
         function cancelSplit() {
@@ -1175,7 +1263,7 @@
         }
 
         // Called from Python during transcription
-        window.showSplitProgress = function(current, total, chunkId) {
+        window.showSplitProgress = function (current, total, chunkId) {
             const container = document.getElementById('chunkProgressContainer');
 
             // Add chunk item if not exists
@@ -1206,7 +1294,7 @@
                 `Parça ${current}/${total} transcribe ediliyor...`;
         };
 
-        window.updateChunkComplete = function(chunkId) {
+        window.updateChunkComplete = function (chunkId) {
             const chunkEl = document.getElementById(`chunk-${chunkId}`);
             if (chunkEl) {
                 const progress = chunkEl.querySelector('.chunk-progress');
@@ -1242,7 +1330,7 @@
         }
 
         // Show split step progress (called when starting to split file)
-        window.showSplitStepProgress = function() {
+        window.showSplitStepProgress = function () {
             const container = document.getElementById('chunkProgressContainer');
             const splitItem = document.createElement('div');
             splitItem.id = 'splitStepItem';
@@ -1258,7 +1346,7 @@
         };
 
         // Mark split step complete (called after file is split)
-        window.markSplitStepComplete = function() {
+        window.markSplitStepComplete = function () {
             const splitItem = document.getElementById('splitStepItem');
             if (splitItem) {
                 splitItem.querySelector('span').textContent = 'Dosya Bölündü ✓';
@@ -1271,7 +1359,7 @@
             updateOverallProgress(10); // Split step = 10%
         };
 
-        window.hideSplitProgress = function() {
+        window.hideSplitProgress = function () {
             document.getElementById('splitProgressModal').classList.add('hidden');
             document.getElementById('chunkProgressContainer').innerHTML = '';
             // Reset overall progress bar
