@@ -55,6 +55,7 @@ Thumbs.db
 desktop.ini
 
 # Documentation (optional/informational)
+docs/
 information/
 
 # Unused Assets
