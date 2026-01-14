@@ -26,6 +26,7 @@ class HistoryManager:
     def __init__(self):
         """Initialize empty history."""
         self._recordings: dict[str, Recording] = {}
+        self._recording_counter = 0  # Counter for unique recording IDs
 
     def add_recording(self, filepath: str, source: SourceType = SourceType.RECORDING) -> str:
         """
@@ -36,9 +37,14 @@ class HistoryManager:
             source: Whether this is from recording or file upload.
 
         Returns:
-            The recording ID (timestamp).
+            The recording ID (timestamp with counter).
         """
-        recording_id = str(int(time.time() * 1000))
+        # Use timestamp + counter to ensure unique IDs even for rapid additions
+        import time
+        timestamp_ms = int(time.time() * 1000)
+        recording_id = f"{timestamp_ms}_{self._recording_counter}"
+        self._recording_counter += 1
+
         recording = Recording(
             id=recording_id,
             filepath=filepath,

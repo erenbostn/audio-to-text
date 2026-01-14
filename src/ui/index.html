@@ -164,7 +164,7 @@
             <div class="bg-gray-900/50 rounded-lg p-4 mb-4">
                 <p class="text-sm text-gray-300 mb-3">Bu dosya <span class="text-orange-400 font-semibold">çok büyük</span>. Parçalara bölünsün mü?</p>
                 <ul class="text-xs text-gray-400 space-y-1">
-                    <li>• Her parça: 10 dakika</li>
+                    <li>• Her parça: 4 dakika</li>
                     <li>• Overlap: 10 saniye (bağlam koruması)</li>
                     <li>• Transcribe: Otomatik sıralı</li>
                     <li>• Merge: Manuel (seçip birleştirin)</li>
@@ -707,6 +707,37 @@
             renderHistory(historyData);
         }
 
+        // Update a single chunk item without full re-render (called during split workflow)
+        window.updateSingleChunkItem = function(chunkData) {
+            // Find the textarea for this chunk
+            const textarea = document.getElementById(`text-${chunkData.id}`);
+            const collapsedDiv = document.getElementById(`collapsed-${chunkData.id}`);
+
+            if (textarea) {
+                // Update textarea value
+                textarea.value = chunkData.text;
+                // Trigger auto-resize
+                autoResizeTextarea(textarea);
+            }
+
+            if (collapsedDiv && !collapsedDiv.classList.contains('hidden')) {
+                // Update collapsed view if visible
+                const textDiv = collapsedDiv.querySelector('.text-sm.text-gray-200');
+                if (textDiv && chunkData.text && chunkData.text.length > 300) {
+                    textDiv.innerHTML = chunkData.text.substring(0, 300) + '...';
+                } else if (textDiv && chunkData.text) {
+                    textDiv.innerHTML = chunkData.text;
+                }
+            }
+
+            // Update word count in "Devamını görmek için tıklayın" text
+            const clickHint = collapsedDiv?.querySelector('span');
+            if (clickHint && chunkData.text) {
+                const wordCount = chunkData.text.split(' ').length;
+                clickHint.textContent = `Devamını görmek için tıklayın (${wordCount} kelime)`;
+            }
+        };
+
         function renderHistory(historyItems) {
             const container = document.getElementById('historyList');
             currentHistoryItems = historyItems || [];
@@ -732,7 +763,10 @@
                             data-id="${item.id}" onchange="updateSelection()">
                         <div class="flex-1">
                             <div class="flex justify-between items-start mb-2">
-                                <div class="text-xs text-gray-500 font-mono">${item.timestamp}</div>
+                                <div class="flex items-center gap-2">
+                                    ${item.is_split && item.chunk_part ? `<span class="px-2 py-0.5 bg-orange-600/30 text-orange-400 text-xs font-medium rounded">Parça ${item.chunk_part}</span>` : ''}
+                                    <div class="text-xs text-gray-500 font-mono">${item.timestamp}</div>
+                                </div>
                                 <div class="flex gap-2 items-center opacity-0 group-hover:opacity-100 transition-opacity">
                                     <div class="order-badge hidden w-5 h-5 bg-orange-600 text-white text-xs font-bold rounded-full flex items-center justify-center"></div>
                                     <button onclick="copyText('${item.id}')" class="text-xs text-blue-400 hover:text-blue-300">Copy</button>
@@ -1106,7 +1140,7 @@
                 pendingFileForSplit = filepath;
 
                 let reason = durationCheck.force_split_by_size
-                    ? `Dosya boyutu: ${durationCheck.file_size_mb.toFixed(1)} MB (API limit: 25 MB)`
+                    ? `Dosya boyutu: ${durationCheck.file_size_mb.toFixed(1)} MB (Limit: 50 MB)`
                     : `Süre: ${durationCheck.duration_minutes.toFixed(1)} dakika`;
 
                 document.getElementById('splitModalDuration').textContent = reason;

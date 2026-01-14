@@ -135,7 +135,10 @@ class Api:
                 "id": r.id,
                 "timestamp": r.created_at.strftime("%Y-%m-%d %H:%M:%S"),
                 "text": r.transcript if r.transcribed else "Processing...",
-                "transcribed": r.transcribed
+                "transcribed": r.transcribed,
+                "is_split": r.is_split if hasattr(r, 'is_split') else False,
+                "chunk_part": r.chunk_part if hasattr(r, 'chunk_part') else None,
+                "parent_recording_id": r.parent_recording_id if hasattr(r, 'parent_recording_id') else None
             }
             for r in recordings
         ]
@@ -242,9 +245,9 @@ class Api:
         transcriber = GroqTranscriber(self._config.get_api_key())
         duration_seconds = transcriber.get_audio_duration(filepath)
 
-        # Also check file size - if > 25 MB, force split regardless of duration
+        # Also check file size - if > 50 MB, force split regardless of duration
         file_size_mb = Path(filepath).stat().st_size / (1024 * 1024)
-        force_split_by_size = file_size_mb > 25
+        force_split_by_size = file_size_mb > 50
 
         return {
             "duration_seconds": duration_seconds,

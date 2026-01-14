@@ -295,12 +295,21 @@ class GroqWhisperApp:
                 recording.is_split = True
                 recording.chunk_part = chunk_info['part']
                 recording.parent_recording_id = recording_id
+            else:
+                print(f"[SPLIT] WARNING: Could not get recording {chunk_recording_id} for metadata")
+                print(f"[SPLIT] WARNING: Chunk will still be transcribed (not skipping)")
 
+            # ALWAYS add to chunk_recordings, even if metadata failed
             chunk_recordings.append({
                 "id": chunk_recording_id,
                 "part": chunk_info['part'],
                 "path": chunk_path
             })
+
+        # Debug logging
+        print(f"[SPLIT] Created {len(chunk_recordings)} chunk entries out of {len(job_metadata['chunks'])} total chunks")
+        for i, cr in enumerate(chunk_recordings):
+            print(f"[SPLIT]   Chunk {i+1}: ID={cr['id']}, Part={cr['part']}, Path={cr['path']}")
 
         # Update UI with new chunk recordings
         self._update_history_ui()
@@ -311,8 +320,32 @@ class GroqWhisperApp:
             lang = None
         translate = self.config.translate_enabled()
 
+        success_count = 0
+        failed_chunks = []
+
         for i, chunk in enumerate(chunk_recordings):
             print(f"[SPLIT] Transcribing chunk {i+1}/{len(chunk_recordings)}")
+
+            # Check chunk file size before transcribing
+            from pathlib import Path
+            chunk_path = Path(chunk['path'])
+            chunk_size_mb = chunk_path.stat().st_size / (1024 * 1024)
+            print(f"[SPLIT] Chunk {i+1} size: {chunk_size_mb:.2f} MB")
+
+            # Skip if chunk is too large for API (use 24 MB to be safe, API limit is 25 MB)
+            if chunk_size_mb >= 24:
+                print(f"[SPLIT] WARNING: Chunk {i+1} is too large ({chunk_size_mb:.2f} MB >= 24 MB), skipping...")
+                failed_chunks.append(i+1)
+                self._evaluate_js(f"""
+                    if (typeof showSplitProgress === 'function') {{
+                        showSplitProgress({i+1}, {len(chunk_recordings)}, "{chunk['id']}");
+                    }}
+                    if (typeof updateChunkComplete === 'function') {{
+                        document.getElementById('chunk-{chunk['id']}').querySelector('.chunk-status').textContent = '⚠️ Çok büyük';
+                        document.getElementById('chunk-{chunk['id']}').querySelector('.chunk-status').classList.add('text-red-400');
+                    }}
+                """)
+                continue
 
             # Update UI progress
             self._evaluate_js(f"""
@@ -322,12 +355,21 @@ class GroqWhisperApp:
             """)
 
             # Transcribe
+            print(f"[SPLIT] Calling transcriber for chunk {i+1}...")
             text = self.transcriber.transcribe(chunk['path'], language=lang, translate=translate)
+            print(f"[SPLIT] Transcriber returned for chunk {i+1}: {len(text) if text else 0} chars")
 
             if text:
                 self.history.update_transcript(chunk['id'], text)
+                success_count += 1
+                print(f"[SPLIT] Chunk {i+1} transcribed successfully")
+                # Update only this chunk in UI (not full re-render to avoid overwriting other chunks)
+                self._update_single_chunk_in_history(chunk['id'])
+            else:
+                failed_chunks.append(i+1)
+                print(f"[SPLIT] Chunk {i+1} transcription failed (no text returned)")
 
-            # Update UI
+            # Update UI progress bar
             self._evaluate_js(f"""
                 if (typeof updateChunkComplete === 'function') {{
                     updateChunkComplete("{chunk['id']}");
@@ -337,8 +379,13 @@ class GroqWhisperApp:
         # Hide progress modal
         self._evaluate_js("if (typeof hideSplitProgress === 'function') { hideSplitProgress(); }")
 
-        print(f"[SPLIT] All {len(chunk_recordings)} chunks transcribed")
-        self._show_toast("✅ Tüm parçalar transcribe edildi. Merge etmek için seçin.", "success")
+        if failed_chunks:
+            print(f"[SPLIT] Failed chunks: {failed_chunks}")
+            self._show_toast(f"⚠️ {success_count}/{len(chunk_recordings)} parça transcribe edildi. Başarısız: {failed_chunks}", "warning")
+        else:
+            print(f"[SPLIT] All {len(chunk_recordings)} chunks transcribed successfully")
+            self._show_toast("✅ Tüm parçalar transcribe edildi. Merge etmek için seçin.", "success")
+
         self._update_history_ui()
 
     def _evaluate_js(self, code: str):
@@ -376,14 +423,39 @@ class GroqWhisperApp:
         import json
         json_str = json.dumps(history_data)
         code = f"updateHistory({json_str})"
-        
+
         if self.dashboard_window:
-            # evaluate_js calls are thread-safe in pywebview usually, but if called from thread, 
+            # evaluate_js calls are thread-safe in pywebview usually, but if called from thread,
             # might need to ensure window is ready.
             try:
                 self.dashboard_window.evaluate_js(code)
             except Exception as e:
                 print(f"Error updating UI: {e}")
+
+    def _update_single_chunk_in_history(self, chunk_id: str) -> None:
+        """Update only a single chunk's transcript in the UI without full re-render."""
+        recording = self.history.get_recording(chunk_id)
+        if not recording:
+            print(f"[SPLIT] Warning: Could not find recording {chunk_id} to update UI")
+            return
+
+        # Prepare chunk data for UI
+        import json
+        chunk_data = {
+            "id": recording.id,
+            "text": recording.transcript if recording.transcribed else "Processing...",
+            "transcribed": recording.transcribed,
+            "timestamp": recording.created_at.strftime("%Y-%m-%d %H:%M:%S")
+        }
+
+        # Call JavaScript to update only this chunk
+        json_str = json.dumps(chunk_data).replace("'", "\\'")
+        code = f"""
+            if (typeof updateSingleChunkItem === 'function') {{
+                updateSingleChunkItem({json_str});
+            }}
+        """
+        self._evaluate_js(code)
 
     def reload_config(self):
         """Reload configuration called from API."""

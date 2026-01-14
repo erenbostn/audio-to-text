@@ -13,7 +13,7 @@ class AudioSplitter:
     """Split audio files into overlapping chunks for safe API transcription."""
 
     # Constants
-    CHUNK_DURATION_SECONDS = 600  # 10 minutes
+    CHUNK_DURATION_SECONDS = 240  # 4 minutes (reduced from 10 to stay under 25MB)
     OVERLAP_SECONDS = 10
     MAX_PART_DURATION_SECONDS = 900  # 15 minutes (API safety)
 
@@ -26,6 +26,7 @@ class AudioSplitter:
         # Try soundfile first (for wav, mp3, flac, ogg)
         try:
             import soundfile as sf
+
             with sf.SoundFile(filepath) as audio_file:
                 frames = len(audio_file)
                 samplerate = audio_file.samplerate
@@ -34,10 +35,13 @@ class AudioSplitter:
             # Fallback to mutagen for m4a and other formats
             try:
                 from mutagen.mp4 import MP4
+
                 audio = MP4(filepath)
                 return audio.info.length
             except ImportError:
-                print(f"[WARNING] mutagen not installed. Cannot get duration for: {filepath}")
+                print(
+                    f"[WARNING] mutagen not installed. Cannot get duration for: {filepath}"
+                )
                 return 0.0
             except Exception as e:
                 print(f"[ERROR] Failed to get duration with mutagen: {e}")
@@ -94,7 +98,9 @@ class AudioSplitter:
 
             # Check max duration
             if part_duration_seconds > self.MAX_PART_DURATION_SECONDS:
-                raise ValueError(f"Part {part_number} exceeds max duration: {part_duration_seconds}s")
+                raise ValueError(
+                    f"Part {part_number} exceeds max duration: {part_duration_seconds}s"
+                )
 
             # Extract chunk
             chunk_data = audio_data[current_frame:end_frame]
@@ -107,7 +113,7 @@ class AudioSplitter:
             # Convert float32 (-1 to 1) to int16
             chunk_data_int16 = (chunk_data * 32767).astype(np.int16)
 
-            with wave.open(str(chunk_path), 'w') as wav_file:
+            with wave.open(str(chunk_path), "w") as wav_file:
                 wav_file.setnchannels(1)  # Mono
                 wav_file.setsampwidth(2)  # 16-bit
                 wav_file.setframerate(samplerate)
@@ -116,14 +122,16 @@ class AudioSplitter:
             current_start_seconds = current_frame / samplerate
             current_end_seconds = end_frame / samplerate
 
-            chunks.append({
-                "part": part_number,
-                "filename": chunk_filename,
-                "start_ms": int(current_start_seconds * 1000),
-                "end_ms": int(current_end_seconds * 1000),
-                "start_seconds": current_start_seconds,
-                "end_seconds": current_end_seconds
-            })
+            chunks.append(
+                {
+                    "part": part_number,
+                    "filename": chunk_filename,
+                    "start_ms": int(current_start_seconds * 1000),
+                    "end_ms": int(current_end_seconds * 1000),
+                    "start_seconds": current_start_seconds,
+                    "end_seconds": current_end_seconds,
+                }
+            )
 
             # Move to next chunk (with overlap)
             # CRITICAL: If we reached the end, break to prevent infinite loop
@@ -146,12 +154,12 @@ class AudioSplitter:
             "created_at": datetime.now().isoformat(),
             "original_filename": Path(filepath).name,
             "original_recording_id": recording_id,
-            "chunks": chunks
+            "chunks": chunks,
         }
 
         # Save job_meta.json
         meta_path = self.temp_dir / f"{recording_id}_job_meta.json"
-        with open(meta_path, 'w', encoding='utf-8') as f:
+        with open(meta_path, "w", encoding="utf-8") as f:
             json.dump(job_metadata, f, indent=2, ensure_ascii=False)
 
         return job_metadata
