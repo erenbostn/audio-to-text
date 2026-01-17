@@ -112,42 +112,78 @@ class Api:
         print("[API] History cleared")
 
     def get_microphones(self) -> List[Dict[str, Any]]:
-        """Get list of available microphones."""
+        """Get list of available microphones (filtered for cleaner UI)."""
         try:
             devices = sd.query_devices()
-            mics = []
-            seen_names = set()  # Track seen names to avoid duplicates
+            host_apis = sd.query_hostapis()
             
-            # Keywords to filter out virtual/loopback/non-mic devices
-            exclude_keywords = [
-                'loopback', 'monitor', 'stereo mix', 'what u hear', 'wave out',
-                'birincil ses', 'primary sound', 'ses eşleştiricisi', 'sound mapper',
-                'hat girişi', 'line input', 'stereo karışımı', 'stereo input',
-                'digital input', 'spdif', 'hdmi'
-            ]
+            # Find WASAPI host API index (best for Windows)
+            wasapi_index = None
+            for i, api in enumerate(host_apis):
+                if 'WASAPI' in api['name']:
+                    wasapi_index = i
+                    break
+            
+            mics = []
+            seen_names = set()
+            
+            # Bluetooth detection keywords
+            bluetooth_keywords = ['airpods', 'bluetooth', 'hands-free', 'wireless', 'bt ', 'bth']
             
             for i, device in enumerate(devices):
                 if device['max_input_channels'] > 0:
                     name = device['name']
-                    name_lower = name.lower()
+                    is_wasapi = device.get('hostapi') == wasapi_index
                     
-                    # Skip virtual/loopback devices
-                    if any(kw in name_lower for kw in exclude_keywords):
+                    # ONLY show WASAPI devices (best quality on Windows)
+                    if not is_wasapi:
                         continue
                     
-                    # Skip duplicates (same name)
-                    if name in seen_names:
+                    # Skip system/virtual devices
+                    skip_keywords = ['Microsoft Ses', 'Birincil Ses', 'Stereo', '@System32', 'Mapper']
+                    if any(kw.lower() in name.lower() for kw in skip_keywords):
                         continue
-                    seen_names.add(name)
+                    
+                    # Skip duplicates by base name
+                    base_name = name.split('(')[0].strip() if '(' in name else name
+                    if base_name in seen_names:
+                        continue
+                    seen_names.add(base_name)
+                    
+                    # Check if Bluetooth device
+                    is_bluetooth = any(kw.lower() in name.lower() for kw in bluetooth_keywords)
+                    
+                    sample_rate = int(device['default_samplerate'])
+                    
+                    # Add Bluetooth warning to display name
+                    if is_bluetooth:
+                        display_name = f"⚠️ {name} ({sample_rate} Hz) - Bluetooth"
+                    else:
+                        display_name = f"{name} ({sample_rate} Hz)"
                     
                     mics.append({
                         "index": i,
-                        "name": name
+                        "name": display_name,
+                        "sample_rate": sample_rate,
+                        "is_bluetooth": is_bluetooth
                     })
+            
+            # Sort: Non-Bluetooth devices first
+            mics.sort(key=lambda x: (x.get('is_bluetooth', False), x['name']))
+            
             return mics
         except Exception as e:
             print(f"[API] Error getting mics: {e}")
             return []
+    
+    def get_recommended_microphone(self) -> int:
+        """Get recommended non-Bluetooth microphone index."""
+        mics = self.get_microphones()
+        for mic in mics:
+            if not mic.get('is_bluetooth', False):
+                return mic['index']
+        # Fallback to first mic if all are Bluetooth
+        return mics[0]['index'] if mics else -1
 
     def get_history(self) -> List[Dict[str, Any]]:
         """Get recording history."""

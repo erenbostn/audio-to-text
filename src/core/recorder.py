@@ -33,6 +33,7 @@ class AudioRecorder:
         """
         self.sample_rate = sample_rate
         self.channels = channels
+        self._actual_sample_rate = sample_rate  # May differ per device
 
         # Recording state
         self._is_recording = False
@@ -104,15 +105,61 @@ class AudioRecorder:
         Args:
             device_index: Microphone device index
         """
+        stream = None
+        
         try:
-            # Create audio stream
-            with sd.InputStream(
-                samplerate=self.sample_rate,
-                channels=self.channels,
-                dtype=np.float32,
-                device=device_index,
-                callback=self._audio_callback
-            ):
+            # If specific device is selected, try to use it
+            if device_index is not None:
+                print(f"Opening stream for device {device_index}...")
+                try:
+                    stream = sd.InputStream(
+                        samplerate=self.sample_rate,
+                        channels=self.channels,
+                        dtype=np.float32,
+                        device=device_index,
+                        callback=self._audio_callback
+                    )
+                except Exception as device_error:
+                    print(f"Device {device_index} init failed: {device_error}")
+                    
+                    # Try to find device by name if index failed (indices can change)
+                    new_index = self._find_device_index_by_old_index(device_index)
+                    if new_index is not None and new_index != device_index:
+                        print(f"Retrying with new device index: {new_index}")
+                        try:
+                            stream = sd.InputStream(
+                                samplerate=self.sample_rate,
+                                channels=self.channels,
+                                dtype=np.float32,
+                                device=new_index,
+                                callback=self._audio_callback
+                            )
+                        except Exception as retry_error:
+                            print(f"Retry failed: {retry_error}")
+                            stream = None
+                    
+                    if stream is None:
+                        # Device not found or invalid - fallback to default
+                        print("Falling back to default system microphone...")
+                        stream = sd.InputStream(
+                            samplerate=self.sample_rate,
+                            channels=self.channels,
+                            dtype=np.float32,
+                            callback=self._audio_callback
+                        )
+            else:
+                # Use configured sample rate for default device
+                stream = sd.InputStream(
+                    samplerate=self.sample_rate,
+                    channels=self.channels,
+                    dtype=np.float32,
+                    callback=self._audio_callback
+                )
+            
+            with stream:
+                self._actual_sample_rate = int(stream.samplerate)
+                print(f"Recording started. Sample rate: {self._actual_sample_rate} Hz")
+                
                 # Keep recording until stop is signaled
                 while self._is_recording:
                     sd.sleep(100)  # Check every 100ms
@@ -161,11 +208,11 @@ class AudioRecorder:
         # Convert float32 to int16 for WAV compatibility
         audio_int16 = (audio_data * 32767).astype(np.int16)
 
-        # Save as WAV
+        # Save as WAV (use actual sample rate from recording)
         with wave.open(temp_file, 'wb') as wav_file:
             wav_file.setnchannels(self.channels)
             wav_file.setsampwidth(2)  # 2 bytes for int16
-            wav_file.setframerate(self.sample_rate)
+            wav_file.setframerate(self._actual_sample_rate)
             wav_file.writeframes(audio_int16.tobytes())
 
         return temp_file
@@ -203,6 +250,45 @@ class AudioRecorder:
             devices = ["Default Device"]
 
         return devices
+
+    def _find_device_index_by_old_index(self, old_index: int) -> Optional[int]:
+        """
+        Attempt to find a device's new index if check failed.
+        This is useful because PortAudio device indices can shift.
+        """
+        try:
+            # We can't really know the old name if we only have the index,
+            # unless we stored it. But here we can try to guess or just refresh.
+            # Strategy: Refresh logs to see current state (this is a blind retry usually)
+            
+            # Better strategy: List all devices, if we are looking for 'AirPods' 
+            # and the user selected an index that WAS airpods, maybe we can find it again?
+            # Since we don't have the original name stored in this class instance easily
+            # (unless we change API), we will try a heuristic:
+            # Check if there is ANY device with the same name as what we expect? 
+            # No, we don't know the name. 
+            
+            # Alternative: Just return None for now unless we store names.
+            # BUT, we can try to query the device name using the OLD index 
+            # (often querying name works even if opening stream fails?)
+            # No, if device is gone, query might fail or return different device.
+            
+            # Let's try to query the failing index to see what it *thinks* it is
+            try:
+                bad_device = sd.query_devices(old_index)
+                target_name = bad_device['name']
+                # If we got a name, search for it in current list
+                current_devices = sd.query_devices()
+                for i, dev in enumerate(current_devices):
+                    if dev['name'] == target_name and dev['max_input_channels'] > 0:
+                        # Found a match with same name!
+                        return i
+            except:
+                pass
+                
+            return None
+        except Exception:
+            return None
 
 
 # Standalone test
