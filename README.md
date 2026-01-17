@@ -64,12 +64,14 @@
 | 📋 **Otomatik Yapıştır** | Transkript otomatik olarak panoya kopyalanır ve aktif uygulamaya yapıştırılır |
 | 📁 **Dosya Yükleme** | Harici ses dosyalarını (wav, mp3, m4a, ogg, flac) transkript edin |
 | ✂️ **Uzun Dosya Parçalama** | 10 dakikadan uzun dosyalar otomatik olarak 4 dakikalık parçalara bölünür |
+| 🔄 **Format Dönüştürücü** | Ses dosyalarını 8 farklı formata dönüştürün (MP3, WAV, FLAC, OGG, AAC, M4A, OPUS, WMA) |
 | 📜 **Kayıt Geçmişi** | Tüm kayıtlar listelenir, seçilebilir, birleştirilebilir |
 | ✏️ **Düzenleme Modu** | Kilit açma ile transkript metinleri düzenlenebilir |
 | 🌍 **Çoklu Dil Desteği** | Türkçe, İngilizce, Almanca, Fransızca, İspanyolca, İtalyanca |
 | 🔄 **İngilizce'ye Çeviri** | Konuşmayı doğrudan İngilizce'ye çevirin |
 | 💾 **İndirme ve Kopyalama** | Transkriptleri .txt dosyası olarak kaydedin |
 | 🔊 **Ses Geri Bildirimi** | Kayıt başlangıç/bitiş sesleri |
+| 🎬 **FFmpeg Entegrasyonu** | Opsiyonel FFmpeg desteği ile genişletilmiş format desteği |
 
 ---
 
@@ -112,6 +114,18 @@
 - **İşletim Sistemi:** Windows 10 veya üzeri
 - **Python:** 3.10 veya üzeri
 - **Groq API Key:** Ücretsiz olarak alınabilir
+- **FFmpeg (Opsiyonel):** M4A/AAC format desteği ve format dönüştürme için
+
+### FFmpeg Kurulumu (Opsiyonel)
+
+Format dönüştürücü ve genişletilmiş format desteği için FFmpeg gereklidir:
+
+1. [ffmpeg.org/download.html](https://ffmpeg.org/download.html) adresinden indirin
+2. Zip dosyasını çıkarın (örn: `C:\ffmpeg`)
+3. `C:\ffmpeg\bin` klasörünü Sistem PATH'ine ekleyin
+4. Terminal'i yeniden başlatın
+
+> 💡 **İpucu:** Kurulum rehberi için: [YouTube Tutorial](https://www.youtube.com/watch?v=eRZRXpzZfM4)
 
 ---
 
@@ -273,16 +287,33 @@ Transkript metinlerini düzenlemek için:
 
 ## 📁 Desteklenen Formatlar
 
-### Giriş Formatları
+### Giriş Formatları (Transkripsiyon)
+| Format | Uzantı | FFmpeg Gerekli? |
+|--------|--------|------------------|
+| WAV | `.wav` | ❌ Hayır |
+| MP3 | `.mp3` | ❌ Hayır |
+| FLAC | `.flac` | ❌ Hayır |
+| OGG | `.ogg` | ❌ Hayır |
+| M4A | `.m4a` | ✅ Evet |
+| AAC | `.aac` | ✅ Evet |
+| WMA | `.wma` | ✅ Evet |
+| OPUS | `.opus` | ✅ Evet |
+| MP4 | `.mp4` | ✅ Evet (video'dan ses çıkarma) |
+| MKV | `.mkv` | ✅ Evet (video'dan ses çıkarma) |
+
+### Format Dönüştürücü Çıkış Formatları (FFmpeg ile)
 | Format | Uzantı | Açıklama |
 |--------|--------|----------|
-| WAV | `.wav` | Sıkıştırılmamış ses |
-| MP3 | `.mp3` | Sıkıştırılmış ses |
-| M4A | `.m4a` | Apple ses formatı |
-| OGG | `.ogg` | Vorbis codec |
+| MP3 | `.mp3` | En yaygın format |
+| WAV | `.wav` | Kayıpsız, büyük boyut |
 | FLAC | `.flac` | Kayıpsız sıkıştırma |
+| OGG | `.ogg` | Açık format, küçük boyut |
+| AAC | `.aac` | Yüksek kalite |
+| M4A | `.m4a` | Apple/iTunes uyumlu |
+| OPUS | `.opus` | En iyi sıkıştırma oranı |
+| WMA | `.wma` | Windows Media |
 
-### Çıkış Formatları
+### Transkript Çıkış Formatları
 - `.txt` - UTF-8 metin dosyası
 
 ### Desteklenen Diller
@@ -364,6 +395,7 @@ audio_to_text/
 │   │   ├── recorder.py        # Ses kaydı modülü
 │   │   ├── transcriber.py     # Groq API transkripsiyon
 │   │   ├── audio_splitter.py  # Uzun dosya parçalama (4dk chunks)
+│   │   ├── ffmpeg_utils.py    # FFmpeg entegrasyonu ve format dönüştürme
 │   │   ├── history_manager.py # Kayıt geçmişi yönetimi
 │   │   └── input_simulator.py # Otomatik yapıştırma
 │   ├── ui/
