@@ -252,3 +252,77 @@ def needs_ffmpeg_conversion(filepath: str) -> bool:
     """
     ext = Path(filepath).suffix.lower()
     return ext in FFMPEG_REQUIRED_FORMATS
+
+
+# Output format configurations for converter
+OUTPUT_FORMATS = {
+    "mp3": {"ext": ".mp3", "codec": "libmp3lame", "extra": ["-ab", "192k"]},
+    "wav": {"ext": ".wav", "codec": "pcm_s16le", "extra": []},
+    "flac": {"ext": ".flac", "codec": "flac", "extra": []},
+    "ogg": {"ext": ".ogg", "codec": "libvorbis", "extra": ["-aq", "5"]},
+    "aac": {"ext": ".aac", "codec": "aac", "extra": ["-ab", "192k"]},
+    "m4a": {"ext": ".m4a", "codec": "aac", "extra": ["-ab", "192k"]},
+    "opus": {"ext": ".opus", "codec": "libopus", "extra": ["-ab", "128k"]},
+    "wma": {"ext": ".wma", "codec": "wmav2", "extra": ["-ab", "192k"]},
+}
+
+
+def convert_audio(input_path: str, output_path: str, output_format: str) -> Tuple[bool, str]:
+    """
+    Convert audio file to specified format using FFmpeg.
+    
+    Args:
+        input_path: Path to the input audio file.
+        output_path: Path where the converted file will be saved.
+        output_format: Target format key (e.g., "mp3", "wav", "flac").
+    
+    Returns:
+        Tuple of (success: bool, message: str).
+    """
+    if not is_ffmpeg_available():
+        return False, "FFmpeg kurulu değil. Kurulum: ffmpeg.org/download.html"
+    
+    if output_format not in OUTPUT_FORMATS:
+        return False, f"Desteklenmeyen format: {output_format}"
+    
+    format_config = OUTPUT_FORMATS[output_format]
+    
+    try:
+        cmd = [
+            "ffmpeg",
+            "-i", input_path,
+            "-vn",  # No video
+            "-acodec", format_config["codec"],
+        ]
+        
+        # Add format-specific options
+        cmd.extend(format_config["extra"])
+        
+        # Add output path
+        cmd.extend(["-y", output_path])
+        
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            timeout=600  # 10 minute timeout
+        )
+        
+        if result.returncode == 0:
+            if Path(output_path).exists() and Path(output_path).stat().st_size > 0:
+                return True, ""
+            else:
+                return False, "Dönüştürme başarısız - çıktı dosyası oluşmadı"
+        else:
+            error_msg = result.stderr.decode("utf-8", errors="ignore")
+            return False, f"FFmpeg hatası: {error_msg[:200]}"
+                
+    except subprocess.TimeoutExpired:
+        return False, "Dönüştürme zaman aşımına uğradı (>10 dakika)"
+    except Exception as e:
+        return False, f"Hata: {str(e)}"
+
+
+def get_supported_output_formats() -> list:
+    """Get list of supported output formats for UI."""
+    return list(OUTPUT_FORMATS.keys())
+

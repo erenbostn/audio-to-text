@@ -257,6 +257,47 @@
         </div>
     </div>
 
+    <!-- Format Converter Modal -->
+    <div id="convertModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+        <div class="bg-gray-800 border border-gray-700 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold text-white">Format Dönüştürücü</h3>
+                    <p id="convertFileName" class="text-sm text-gray-400 truncate max-w-xs"></p>
+                </div>
+            </div>
+
+            <div class="bg-gray-900/50 rounded-lg p-4 mb-4">
+                <label class="block text-sm font-medium text-gray-400 mb-2">Çıktı Formatı</label>
+                <select id="outputFormatSelect"
+                    class="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all outline-none appearance-none cursor-pointer">
+                    <option value="">Yükleniyor...</option>
+                </select>
+            </div>
+
+            <div class="flex gap-3">
+                <button onclick="closeConvertModal()"
+                    class="flex-1 px-4 py-2.5 bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium rounded-lg transition-colors">
+                    İptal
+                </button>
+                <button onclick="performConvert()"
+                    class="flex-1 px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                    </svg>
+                    Dönüştür
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- DASHBOARD VIEW -->
     <div id="dashboard" class="hidden h-full flex flex-col bg-gray-900">
         <!-- Header -->
@@ -283,8 +324,8 @@
         <!-- Main Content -->
         <main class="flex-1 overflow-y-auto p-6 space-y-6">
 
-            <!-- Actions Section (Record & Upload) -->
-            <section class="grid grid-cols-2 gap-4">
+            <!-- Actions Section (Record, Transcribe & Convert) -->
+            <section class="grid grid-cols-3 gap-3">
                 <button id="recordBtn" onclick="toggleRecord()"
                     class="flex flex-col items-center justify-center p-4 bg-gray-800/50 border border-gray-700 rounded-xl hover:bg-gray-800 transition-all active:scale-95 group relative overflow-hidden">
                     <div id="recordIcon"
@@ -309,7 +350,20 @@
                                 d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                         </svg>
                     </div>
-                    <span class="text-sm font-medium text-white">Upload File</span>
+                    <span class="text-sm font-medium text-white">Transcribe</span>
+                </button>
+
+                <button onclick="openConvertModal()"
+                    class="flex flex-col items-center justify-center p-4 bg-gray-800/50 border border-gray-700 rounded-xl hover:bg-gray-800 transition-all active:scale-95 group">
+                    <div
+                        class="w-12 h-12 rounded-full bg-purple-500/10 flex items-center justify-center mb-2 group-hover:bg-purple-500/20 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-purple-500" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                        </svg>
+                    </div>
+                    <span class="text-sm font-medium text-white">Convert</span>
                 </button>
             </section>
 
@@ -797,6 +851,72 @@
             await pywebview.api.clear_history();
             renderHistory([]);
             showToast('🗑️ History cleared', 'info');
+        }
+
+        // === Format Converter Functions ===
+        let convertFilePath = null;
+
+        async function openConvertModal() {
+            // Check if FFmpeg is available
+            const status = await pywebview.api.get_ffmpeg_status();
+            if (!status.installed) {
+                showToast('❌ Format dönüştürme için FFmpeg gerekli', 'error');
+                return;
+            }
+
+            // Select file
+            const filepath = await pywebview.api.select_file_for_convert();
+            if (!filepath) return;
+
+            convertFilePath = filepath;
+
+            // Get filename for display
+            const filename = filepath.split(/[/\\]/).pop();
+            document.getElementById('convertFileName').textContent = filename;
+
+            // Load output formats
+            const formats = await pywebview.api.get_output_formats();
+            const select = document.getElementById('outputFormatSelect');
+            select.innerHTML = '';
+
+            formats.forEach(fmt => {
+                const opt = document.createElement('option');
+                opt.value = fmt.key;
+                opt.textContent = `${fmt.name} (${fmt.ext})`;
+                select.appendChild(opt);
+            });
+
+            // Show modal
+            document.getElementById('convertModal').classList.remove('hidden');
+        }
+
+        function closeConvertModal() {
+            document.getElementById('convertModal').classList.add('hidden');
+            convertFilePath = null;
+        }
+
+        async function performConvert() {
+            if (!convertFilePath) return;
+
+            const format = document.getElementById('outputFormatSelect').value;
+            if (!format) {
+                showToast('⚠️ Lütfen bir format seçin', 'warning');
+                return;
+            }
+
+            // Save path before closing modal (closeConvertModal resets convertFilePath)
+            const inputPath = convertFilePath;
+
+            closeConvertModal();
+            showToast('🔄 Dönüştürülüyor...', 'info');
+
+            const result = await pywebview.api.convert_file(inputPath, format);
+
+            if (result.success) {
+                showToast('✅ ' + result.message, 'success');
+            } else {
+                showToast('❌ ' + result.message, 'error');
+            }
         }
 
         // Toast notification system

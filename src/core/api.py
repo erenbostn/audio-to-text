@@ -426,3 +426,108 @@ class Api:
         except Exception as e:
             print(f"[API] Error saving transcript: {e}")
             return False
+
+    # === Format Converter Endpoints ===
+
+    def get_output_formats(self) -> List[Dict[str, str]]:
+        """Get list of supported output formats for converter UI."""
+        from .ffmpeg_utils import OUTPUT_FORMATS, is_ffmpeg_available
+        
+        if not is_ffmpeg_available():
+            return []
+        
+        return [
+            {"key": key, "ext": config["ext"], "name": key.upper()}
+            for key, config in OUTPUT_FORMATS.items()
+        ]
+
+    def select_file_for_convert(self) -> str | None:
+        """Open file picker for conversion."""
+        try:
+            import tkinter as tk
+            from tkinter import filedialog
+            
+            root = tk.Tk()
+            root.withdraw()
+            root.attributes('-topmost', True)
+            
+            file_path = filedialog.askopenfilename(
+                title="Dönüştürülecek Dosyayı Seç",
+                filetypes=[
+                    ("Ses/Video Dosyaları", "*.mp3 *.wav *.m4a *.ogg *.flac *.aac *.wma *.opus *.mp4 *.mkv *.webm"),
+                    ("Tüm Dosyalar", "*.*")
+                ]
+            )
+            
+            root.destroy()
+            print(f"[API] Selected file for convert: {file_path}")
+            return file_path if file_path else None
+            
+        except Exception as e:
+            print(f"[API] Error selecting file: {e}")
+            return None
+
+    def convert_file(self, input_path: str, output_format: str) -> Dict[str, Any]:
+        """
+        Convert file to specified format with save dialog.
+        
+        Args:
+            input_path: Path to the input file
+            output_format: Target format key (e.g., "mp3", "wav")
+        
+        Returns:
+            Dict with success status and message
+        """
+        from .ffmpeg_utils import convert_audio, OUTPUT_FORMATS, is_ffmpeg_available
+        from pathlib import Path
+        import tkinter as tk
+        from tkinter import filedialog
+        
+        if not is_ffmpeg_available():
+            return {"success": False, "message": "FFmpeg kurulu değil"}
+        
+        print(f"[API] convert_file called with: input_path={input_path}, format={output_format}")
+        
+        if not input_path:
+            return {"success": False, "message": "Dosya seçilmedi"}
+        
+        if output_format not in OUTPUT_FORMATS:
+            return {"success": False, "message": f"Desteklenmeyen format: {output_format}"}
+        
+        # Get output extension
+        ext = OUTPUT_FORMATS[output_format]["ext"]
+        
+        # Generate default filename
+        input_name = Path(input_path).stem
+        default_filename = f"{input_name}{ext}"
+        
+        # Open save dialog
+        try:
+            root = tk.Tk()
+            root.withdraw()
+            root.attributes('-topmost', True)
+            
+            output_path = filedialog.asksaveasfilename(
+                title="Dönüştürülen Dosyayı Kaydet",
+                defaultextension=ext,
+                initialfile=default_filename,
+                filetypes=[(f"{output_format.upper()} Dosyası", f"*{ext}"), ("Tüm Dosyalar", "*.*")]
+            )
+            
+            root.destroy()
+            
+            if not output_path:
+                return {"success": False, "message": "İptal edildi"}
+            
+            # Convert file
+            success, message = convert_audio(input_path, output_path, output_format)
+            
+            if success:
+                return {"success": True, "message": f"Başarıyla kaydedildi: {output_path}"}
+            else:
+                return {"success": False, "message": message}
+                
+        except Exception as e:
+            print(f"[API] Convert error: {e}")
+            return {"success": False, "message": str(e)}
+
