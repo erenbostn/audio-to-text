@@ -315,11 +315,11 @@ class Api:
         Returns:
             Dict with duration info and should_split flag
         """
-        from core.transcriber import GroqTranscriber
+        from core.audio_splitter import AudioSplitter
         from pathlib import Path
 
-        transcriber = GroqTranscriber(self._config.get_api_key())
-        duration_seconds = transcriber.get_audio_duration(filepath)
+        splitter = AudioSplitter(temp_dir="temp")
+        duration_seconds = splitter.get_audio_duration(filepath)
 
         # Check file size - Groq API limit is 25 MB, so split if > 24 MB
         file_size_mb = Path(filepath).stat().st_size / (1024 * 1024)
