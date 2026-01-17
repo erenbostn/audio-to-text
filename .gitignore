@@ -62,3 +62,10 @@ information/
 # Unused Assets
 assets/microphone (1).png
 assets/mic_icon.png
+
+# Test & Debug Outputs
+airpods_test.txt
+audio_analysis.txt
+current_devices.txt
+device_output.txt
+filtered_mics.txt

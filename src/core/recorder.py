@@ -33,6 +33,7 @@ class AudioRecorder:
         """
         self.sample_rate = sample_rate
         self.channels = channels
+        self._actual_sample_rate = sample_rate  # May differ per device
 
         # Recording state
         self._is_recording = False
@@ -104,15 +105,42 @@ class AudioRecorder:
         Args:
             device_index: Microphone device index
         """
+        stream = None
+        
         try:
-            # Create audio stream
-            with sd.InputStream(
-                samplerate=self.sample_rate,
-                channels=self.channels,
-                dtype=np.float32,
-                device=device_index,
-                callback=self._audio_callback
-            ):
+            # If specific device is selected, try to use it
+            if device_index is not None:
+                print(f"Opening stream for device {device_index}...")
+                try:
+                    stream = sd.InputStream(
+                        channels=self.channels,
+                        dtype=np.float32,
+                        device=device_index,
+                        callback=self._audio_callback
+                    )
+                except Exception as device_error:
+                    # Device not found or invalid - fallback to default
+                    print(f"Device {device_index} not available: {device_error}")
+                    print("Falling back to default system microphone...")
+                    stream = sd.InputStream(
+                        samplerate=self.sample_rate,
+                        channels=self.channels,
+                        dtype=np.float32,
+                        callback=self._audio_callback
+                    )
+            else:
+                # Use configured sample rate for default device
+                stream = sd.InputStream(
+                    samplerate=self.sample_rate,
+                    channels=self.channels,
+                    dtype=np.float32,
+                    callback=self._audio_callback
+                )
+            
+            with stream:
+                self._actual_sample_rate = int(stream.samplerate)
+                print(f"Recording started. Sample rate: {self._actual_sample_rate} Hz")
+                
                 # Keep recording until stop is signaled
                 while self._is_recording:
                     sd.sleep(100)  # Check every 100ms
@@ -161,11 +189,11 @@ class AudioRecorder:
         # Convert float32 to int16 for WAV compatibility
         audio_int16 = (audio_data * 32767).astype(np.int16)
 
-        # Save as WAV
+        # Save as WAV (use actual sample rate from recording)
         with wave.open(temp_file, 'wb') as wav_file:
             wav_file.setnchannels(self.channels)
             wav_file.setsampwidth(2)  # 2 bytes for int16
-            wav_file.setframerate(self.sample_rate)
+            wav_file.setframerate(self._actual_sample_rate)
             wav_file.writeframes(audio_int16.tobytes())
 
         return temp_file
