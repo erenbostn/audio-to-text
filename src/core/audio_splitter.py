@@ -3,10 +3,18 @@ Audio Splitter Module - Splits long audio files into chunks for transcription
 """
 
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 import json
 from datetime import datetime
 import numpy as np
+
+from .ffmpeg_utils import (
+    is_ffmpeg_available,
+    convert_to_wav,
+    get_duration_ffprobe,
+    needs_ffmpeg_conversion,
+    FFMPEG_REQUIRED_FORMATS
+)
 
 
 class AudioSplitter:
@@ -32,20 +40,23 @@ class AudioSplitter:
                 samplerate = audio_file.samplerate
                 return frames / samplerate
         except Exception:
-            # Fallback to mutagen for m4a and other formats
-            try:
-                from mutagen.mp4 import MP4
-
-                audio = MP4(filepath)
-                return audio.info.length
-            except ImportError:
-                print(
-                    f"[WARNING] mutagen not installed. Cannot get duration for: {filepath}"
-                )
-                return 0.0
-            except Exception as e:
-                print(f"[ERROR] Failed to get duration with mutagen: {e}")
-                return 0.0
+            pass
+        
+        # Fallback to mutagen for m4a and other formats
+        try:
+            from mutagen.mp4 import MP4
+            audio = MP4(filepath)
+            return audio.info.length
+        except Exception:
+            pass
+        
+        # Final fallback: use ffprobe if available
+        duration = get_duration_ffprobe(filepath)
+        if duration is not None:
+            return duration
+        
+        print(f"[WARNING] Could not determine duration for: {filepath}")
+        return 0.0
 
     def should_split(self, filepath: str, threshold_seconds: int = 600) -> bool:
         """Check if audio file should be split (duration > threshold)."""
@@ -66,16 +77,27 @@ class AudioSplitter:
         import soundfile as sf
         import wave
 
-        # Check file format - soundfile doesn't support m4a/aac
         file_ext = Path(filepath).suffix.lower()
-        unsupported_formats = ['.m4a', '.aac', '.mp4']
+        original_filepath = filepath
+        converted_temp_file: Optional[Path] = None
         
-        if file_ext in unsupported_formats:
-            raise ValueError(
-                f"M4A/AAC formatı parçalama için desteklenmiyor. "
-                f"Lütfen dosyayı MP3 veya WAV formatına dönüştürün. "
-                f"(Online converter: cloudconvert.com)"
-            )
+        # Check if format needs FFmpeg conversion
+        if needs_ffmpeg_conversion(filepath):
+            if not is_ffmpeg_available():
+                raise ValueError(
+                    f"Bu format ({file_ext}) için FFmpeg gerekli. "
+                    f"Kurulum: ffmpeg.org/download.html"
+                )
+            
+            # Convert to temp WAV file
+            converted_temp_file = self.temp_dir / f"{recording_id}_converted.wav"
+            success, error_msg = convert_to_wav(filepath, str(converted_temp_file))
+            
+            if not success:
+                raise ValueError(f"Format dönüştürme hatası: {error_msg}")
+            
+            filepath = str(converted_temp_file)
+            print(f"[INFO] Converted {file_ext} to WAV for processing")
 
         # Read the audio file
         try:
@@ -84,7 +106,10 @@ class AudioSplitter:
                 total_frames = len(audio_file)
                 audio_data = audio_file.read(dtype="float32")
         except Exception as e:
-            raise ValueError(f"Dosya okunamadı. Desteklenen formatlar: WAV, MP3, FLAC, OGG. Hata: {e}")
+            # Clean up converted file if it exists
+            if converted_temp_file and converted_temp_file.exists():
+                converted_temp_file.unlink()
+            raise ValueError(f"Dosya okunamadı. Hata: {e}")
 
         # Convert to mono if stereo
         if len(audio_data.shape) > 1:
@@ -119,19 +144,38 @@ class AudioSplitter:
             # Extract chunk
             chunk_data = audio_data[current_frame:end_frame]
 
-            # Generate filename
-            chunk_filename = f"{Path(filepath).stem}_{part_number:03d}_part.wav"
-            chunk_path = self.temp_dir / chunk_filename
-
-            # Write chunk as WAV file
-            # Convert float32 (-1 to 1) to int16
+            # Write chunk - use MP3 if FFmpeg available, otherwise WAV
             chunk_data_int16 = (chunk_data * 32767).astype(np.int16)
-
-            with wave.open(str(chunk_path), "w") as wav_file:
+            
+            # Always write WAV first (required for processing)
+            temp_wav_filename = f"{Path(filepath).stem}_{part_number:03d}_part.wav"
+            temp_wav_path = self.temp_dir / temp_wav_filename
+            
+            with wave.open(str(temp_wav_path), "w") as wav_file:
                 wav_file.setnchannels(1)  # Mono
                 wav_file.setsampwidth(2)  # 16-bit
                 wav_file.setframerate(samplerate)
                 wav_file.writeframes(chunk_data_int16.tobytes())
+            
+            # Convert to MP3 if FFmpeg available (saves ~50% disk space)
+            if is_ffmpeg_available():
+                from .ffmpeg_utils import convert_wav_to_mp3
+                mp3_filename = f"{Path(filepath).stem}_{part_number:03d}_part.mp3"
+                mp3_path = self.temp_dir / mp3_filename
+                
+                success, _ = convert_wav_to_mp3(str(temp_wav_path), str(mp3_path))
+                if success:
+                    # Delete WAV, keep MP3
+                    temp_wav_path.unlink()
+                    chunk_filename = mp3_filename
+                    chunk_path = mp3_path
+                else:
+                    # Fallback to WAV if conversion fails
+                    chunk_filename = temp_wav_filename
+                    chunk_path = temp_wav_path
+            else:
+                chunk_filename = temp_wav_filename
+                chunk_path = temp_wav_path
 
             current_start_seconds = current_frame / samplerate
             current_end_seconds = end_frame / samplerate

@@ -444,8 +444,11 @@ class GroqWhisperApp:
         """Show toast notification in UI."""
         if self.dashboard_window:
             try:
-                # Escape quotes in message
-                safe_message = message.replace("'", "\\'")
+                # Escape special characters for JavaScript string
+                safe_message = message.replace("\\", "\\\\")  # Escape backslashes first
+                safe_message = safe_message.replace("\n", " ")  # Replace newlines with space
+                safe_message = safe_message.replace("\r", "")   # Remove carriage returns
+                safe_message = safe_message.replace("'", "\\'") # Escape single quotes
                 code = f"showToast('{safe_message}', '{toast_type}')"
                 self.dashboard_window.evaluate_js(code)
             except Exception as e:

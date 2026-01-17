@@ -106,6 +106,24 @@ class Api:
             self._config.save_translate_setting(value)
         print(f"[API] {setting} set to: {value}")
 
+    def get_ffmpeg_status(self) -> Dict[str, Any]:
+        """
+        Check FFmpeg availability for UI display.
+        
+        Returns:
+            Dict with installed status, version, and install URL
+        """
+        from .ffmpeg_utils import is_ffmpeg_available, get_ffmpeg_version
+        
+        installed = is_ffmpeg_available()
+        version = get_ffmpeg_version() if installed else None
+        
+        return {
+            "installed": installed,
+            "version": version,
+            "install_url": "https://ffmpeg.org/download.html"
+        }
+
     def clear_history(self) -> None:
         """Clear all recording history."""
         self._history.clear_all()

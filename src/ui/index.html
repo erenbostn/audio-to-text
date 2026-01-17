@@ -375,6 +375,32 @@
                         </div>
                     </div>
 
+                    <!-- FFmpeg Status -->
+                    <div id="ffmpegSection" class="p-3 bg-gray-800/30 border border-gray-700 rounded-lg">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-medium text-gray-400">FFmpeg</span>
+                                <span id="ffmpegStatus"
+                                    class="text-xs px-2 py-0.5 rounded-full bg-gray-700 text-gray-400">
+                                    Kontrol ediliyor...
+                                </span>
+                            </div>
+                            <div id="ffmpegLinks" class="flex items-center gap-3 hidden">
+                                <a href="#" onclick="openFFmpegTutorial()"
+                                    class="text-xs text-purple-400 hover:text-purple-300 transition-colors">
+                                    📺 Kurulum Rehberi
+                                </a>
+                                <a href="#" onclick="openFFmpegDownload()"
+                                    class="text-xs text-blue-400 hover:text-blue-300 transition-colors">
+                                    ⬇️ İndir
+                                </a>
+                            </div>
+                        </div>
+                        <p id="ffmpegHint" class="text-xs text-gray-500 mt-2 hidden">
+                            Tüm ses formatlarını desteklemek için FFmpeg kurulumu önerilir.
+                        </p>
+                    </div>
+
                     <!-- Toggles Grid (4 columns) -->
                     <div class="grid grid-cols-4 gap-2">
                         <label
@@ -574,6 +600,9 @@
                     populateMicrophones(devices, config.input_device_index);
 
                     renderHistory(await pywebview.api.get_history());
+
+                    // Check FFmpeg status
+                    checkFFmpegStatus();
                 });
             } catch (e) {
                 console.error("Init failed", e);
@@ -657,6 +686,46 @@
                     btn.classList.remove('opacity-75', 'cursor-not-allowed');
                 }, 2000);
             }, 500);
+        }
+
+        // FFmpeg status check
+        let ffmpegInstallUrl = 'https://ffmpeg.org/download.html';
+        const ffmpegTutorialUrl = 'https://www.youtube.com/watch?v=eRZRXpzZfM4&t=1s';
+
+        async function checkFFmpegStatus() {
+            try {
+                const status = await pywebview.api.get_ffmpeg_status();
+                const badge = document.getElementById('ffmpegStatus');
+                const linksDiv = document.getElementById('ffmpegLinks');
+                const hint = document.getElementById('ffmpegHint');
+
+                ffmpegInstallUrl = status.install_url || ffmpegInstallUrl;
+
+                if (status.installed) {
+                    badge.textContent = '✓ Kurulu';
+                    badge.className = 'text-xs px-2 py-0.5 rounded-full bg-green-900/50 text-green-400';
+                    linksDiv.classList.add('hidden');
+                    hint.classList.add('hidden');
+                } else {
+                    badge.textContent = '✗ Kurulu değil';
+                    badge.className = 'text-xs px-2 py-0.5 rounded-full bg-orange-900/50 text-orange-400';
+                    linksDiv.classList.remove('hidden');
+                    hint.classList.remove('hidden');
+                }
+            } catch (e) {
+                console.error('FFmpeg status check failed:', e);
+                const badge = document.getElementById('ffmpegStatus');
+                badge.textContent = '? Bilinmiyor';
+                badge.className = 'text-xs px-2 py-0.5 rounded-full bg-gray-700 text-gray-400';
+            }
+        }
+
+        function openFFmpegDownload() {
+            window.open(ffmpegInstallUrl, '_blank');
+        }
+
+        function openFFmpegTutorial() {
+            window.open(ffmpegTutorialUrl, '_blank');
         }
 
         // Instant language save (no need to click Save)
